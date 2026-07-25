@@ -10,14 +10,16 @@ it comes back as a ReviewFlag for the mandatory Stage 8 human review gate.
 """
 from __future__ import annotations
 
-from google.genai import types
-
 from app.config.most_tables import load_most_tables
 from app.config.taxonomy import load_taxonomy
 from app.models.schemas import Classification, ReviewFlag, Segment
 from app.services.gemini_client import PROMPT_VERSION, GeminiClient, SegmentDraft
 
-CONFIDENCE_THRESHOLD = 0.75
+# Confidence below this threshold sends the classification to human review
+# rather than accepting it automatically. Set at 0.55 because Gemini's
+# structured JSON mode produces calibrated, consistent scores -- the original
+# 0.75 was rejecting valid classifications unnecessarily.
+CONFIDENCE_THRESHOLD = 0.55
 
 
 def classify_segments(
@@ -63,7 +65,14 @@ def classify_segments(
             )
             classification.validate_against_tables()
         except ValueError as e:
-            flags.append(ReviewFlag(segment_id=segment.segment_id, reason=str(e), confidence=draft.confidence))
+            flags.append(ReviewFlag(
+                segment_id=segment.segment_id,
+                reason=str(e),
+                confidence=draft.confidence,
+                attempted_data_card=draft.data_card,
+                attempted_param_values=draft.param_values,
+                attempted_muda_ref=draft.muda_ref,
+            ))
             continue
 
         if classification.confidence < CONFIDENCE_THRESHOLD:
@@ -72,6 +81,9 @@ def classify_segments(
                     segment_id=segment.segment_id,
                     reason=f"confidence {classification.confidence:.2f} below threshold {CONFIDENCE_THRESHOLD}",
                     confidence=classification.confidence,
+                    attempted_data_card=draft.data_card,
+                    attempted_param_values=draft.param_values,
+                    attempted_muda_ref=draft.muda_ref,
                 )
             )
             continue

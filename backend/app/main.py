@@ -307,8 +307,10 @@ async def analyze_demo_video(
                 ReviewFlag(
                     segment_id=i + 1,
                     reason=f"Low confidence ({cls.confidence*100:.0f}%) on classification card {card}",
-                    suggested_card=card,
-                    suggested_params=params,
+                    confidence=cls.confidence,
+                    attempted_data_card=card,
+                    attempted_param_values=params,
+                    attempted_muda_ref=muda,
                 )
             )
 
