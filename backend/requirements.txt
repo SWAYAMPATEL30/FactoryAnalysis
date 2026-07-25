@@ -6,7 +6,7 @@ python-multipart
 google-genai
 google-cloud-aiplatform
 python-dotenv
-mediapipe
+mediapipe==0.10.14
 transformers
 torch
 pytest
