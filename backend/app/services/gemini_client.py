@@ -150,16 +150,13 @@ def _classification_prompt(most_tables: MostTables, taxonomy: Taxonomy) -> str:
     taxonomy_lines = [f"{e.ref}: {e.description} ({e.classification})" for e in taxonomy.entries]
 
     return f"""You are the structured classification step of a MOST time-and-motion study.
-You are given the same video and a list of already-segmented elemental motions
-(index, start/end time, description).
+You are given a list of already-segmented elemental motions
+(index, start/end time, description) describing an operator's actions.
 
-Before classifying, look closely at what each tool/action actually DOES to the part --
-not just what the tool looks like. A pen/syringe-shaped dispenser applying a visible
-substance (glue, sealant, paint) onto the part is GLUING (ref 35) or PAINTING (ref 41),
-not fastening/screwing (ref 42), even if it superficially resembles a powered
-screwdriver. A rotating bit engaging and turning a screw head is fastening (ref 42).
-Check for physical evidence in the frame -- residue, adhesive, or material appearing
-on the part -- rather than assuming from the tool's silhouette alone.
+Before classifying, carefully read what each tool/action actually DOES to the part based on the description.
+A dispenser applying a visible substance (glue, sealant, paint) onto the part is GLUING (ref 35) or PAINTING (ref 41),
+not fastening/screwing (ref 42). A rotating bit engaging and turning a screw head is fastening (ref 42).
+Base your classification entirely on the provided text description.
 
 For EACH segment, in the same order, choose:
 
@@ -316,11 +313,9 @@ class GeminiClient:
 
     def classify_segments(
         self,
-        video: str | bytes | types.File,
         segments: list[SegmentDraft],
         most_tables: MostTables,
         taxonomy: Taxonomy,
-        mime_type: str = "video/mp4",
     ) -> tuple[list[ClassificationDraft], str]:
         """Stage 5. Structured output only -- schema enumerates data_card and
         muda_ref; param_values are cross-checked against the fixed index
@@ -331,7 +326,6 @@ class GeminiClient:
             for i, s in enumerate(segments)
         )
         contents = [
-            self._video_part(video, mime_type),
             _classification_prompt(most_tables, taxonomy),
             f"\nSegments:\n{segment_listing}",
         ]

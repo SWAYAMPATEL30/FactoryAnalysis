@@ -21,7 +21,7 @@ CONFIDENCE_THRESHOLD = 0.75
 
 
 def classify_segments(
-    client: GeminiClient, video: str | bytes | types.File, segments: list[Segment]
+    client: GeminiClient, segments: list[Segment]
 ) -> tuple[dict[int, Classification], list[ReviewFlag]]:
     """Returns (segment_id -> Classification for segments that passed
     validation, review flags for everything that didn't or was low
@@ -36,7 +36,7 @@ def classify_segments(
         for s in segments
     ]
     drafts, model_version = client.classify_segments(
-        video, draft_client_segments, most_tables, taxonomy
+        segments=draft_client_segments, most_tables=most_tables, taxonomy=taxonomy
     )
 
     classifications: dict[int, Classification] = {}

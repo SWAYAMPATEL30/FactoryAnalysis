@@ -158,7 +158,7 @@ def _process_video_job(
 
         # 4. Structured Classification
         JOBS[job_id]["phase"] = "CLASSIFYING"
-        classifications, review_flags = classify_segments(client, uploaded_video, segments)
+        classifications, review_flags = classify_segments(client, segments)
 
         # 5. Deterministic TMU Engine
         JOBS[job_id]["phase"] = "FINALIZING"
