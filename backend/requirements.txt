@@ -1,0 +1,29 @@
+# ── Web framework ──────────────────────────────────────────────────────────────
+fastapi==0.115.14
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+pydantic>=2.0,<3
+
+# ── Excel ──────────────────────────────────────────────────────────────────────
+openpyxl==3.1.5
+
+# ── Gemini / Google AI ─────────────────────────────────────────────────────────
+google-genai==1.26.0
+google-cloud-aiplatform==1.100.0
+
+# ── Computer Vision ────────────────────────────────────────────────────────────
+# CPU-only torch: avoids the 2.5 GB CUDA build that OOMs on Railway/Render.
+# Must come BEFORE ultralytics so it picks up the cpu wheel, not the CUDA one.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
+opencv-python-headless==4.11.0.86
+mediapipe==0.10.21
+ultralytics==8.3.174
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+python-dotenv==1.1.1
+aiofiles==24.1.0
+
+# ── Tests (not installed in production Docker image) ───────────────────────────
+pytest==8.3.5

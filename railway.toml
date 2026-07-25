@@ -1,0 +1,12 @@
+[build]
+# Use the Dockerfile at the repo root
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Railway uses GET /health to decide if the container started successfully
+healthcheckPath = "/health"
+healthcheckTimeout = 120  # seconds — allow time for MediaPipe/YOLO model loading
+
+# Restart the container automatically on crash
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 5
