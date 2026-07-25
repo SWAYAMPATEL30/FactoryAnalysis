@@ -2,10 +2,9 @@
 FROM node:22-slim AS frontend-build
 
 WORKDIR /build/frontend
-COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --prefer-offline
-
+COPY frontend/package.json ./
 COPY frontend/ ./
+RUN npm install
 RUN npm run build
 
 
@@ -51,5 +50,5 @@ RUN python scripts/download_models.py || true
 # Expose port (documentation only; Railway uses $PORT env var)
 EXPOSE $PORT
 
-# Start command
-CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+# Start command: reads $PORT from Railway's environment
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"]
