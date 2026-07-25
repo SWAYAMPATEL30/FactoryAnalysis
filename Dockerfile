@@ -7,7 +7,6 @@ RUN npm ci --prefer-offline
 
 COPY frontend/ ./
 RUN npm run build
-# Output: /build/frontend/dist/
 
 
 # ── Stage 2: Python runtime ────────────────────────────────────────────────────
@@ -23,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python dependencies first (layer cached until requirements change)
+# Install Python dependencies (layer cached until requirements.txt changes)
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -36,30 +35,21 @@ COPY data/ ../data/
 # Copy built React app into frontend/dist/ where main.py expects it
 COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 
-# Copy YOLO weights into the location stage3_cv_tracking.py expects
-# (OBJECT_DETECTION_MODEL = "yolov8s-world.pt" — relative, loaded by ultralytics
-#  from wherever the process working directory is, which is /app)
+# YOLO weights — copied into /app so ultralytics finds them relative to CWD
 COPY backend/yolov8s-world.pt ./yolov8s-world.pt
 
-# Create uploads directory (persisted via Railway volume in production)
+# Create uploads directory
 RUN mkdir -p ../data/uploads
 
 # Railway injects $PORT at runtime. Default to 8000 for local docker run.
 ENV PORT=8000
 
-# Pre-download MediaPipe model files at build time so first request isn't slow.
-# Falls back gracefully if network is unavailable during build.
-RUN python -c "
-from app.pipeline.stage3_cv_tracking import ensure_models_downloaded
-try:
-    ensure_models_downloaded()
-    print('MediaPipe models downloaded.')
-except Exception as e:
-    print(f'MediaPipe model download skipped: {e}')
-" || true
+# Pre-download MediaPipe model files at build time using a script
+# (avoids multi-line python -c strings that confuse the Dockerfile parser)
+RUN python scripts/download_models.py || true
 
-# Expose the port (documentation only; Railway uses $PORT)
+# Expose port (documentation only; Railway uses $PORT env var)
 EXPOSE $PORT
 
-# Start command: reads $PORT from Railway's environment
+# Start command
 CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
