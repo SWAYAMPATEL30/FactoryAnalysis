@@ -10,8 +10,8 @@ export function UploadPage() {
   const [activityDescription, setActivityDescription] = useState("ASSY WITH PRESS OPERATION");
   const [stationNo, setStationNo] = useState("");
   const [activityNo, setActivityNo] = useState("");
-  const [dragging, setDragging] = useState(false);
   const [useCvTracking, setUseCvTracking] = useState(true);
+  const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useMutation({
@@ -20,7 +20,7 @@ export function UploadPage() {
   });
 
   const sampleMutation = useMutation({
-    mutationFn: () => analyzeSampleVideo({ activityDescription, stationNo, activityNo }),
+    mutationFn: () => analyzeSampleVideo({ activityDescription, stationNo, activityNo, useCvTracking: true }),
     onSuccess: (data) => navigate(`/jobs/${data.job_id}`),
   });
 
@@ -101,56 +101,36 @@ export function UploadPage() {
           </div>
         </div>
 
-        {/* Analysis Mode Toggle */}
-        <div className="mb-6">
-          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-faint">Analysis Mode</div>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Fast Mode */}
+        <div className="mb-8">
+          <label className="mb-3 block text-xs font-medium uppercase tracking-wide text-ink-faint">
+            Analysis Mode
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setUseCvTracking(false)}
-              className={`rounded-md border-[1.5px] px-4 py-3.5 text-left transition-all ${
-                !useCvTracking
-                  ? "border-accent bg-accent-soft"
-                  : "border-line-strong bg-raised hover:border-accent/60"
+              className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border p-4 text-left transition-colors ${
+                !useCvTracking ? "border-accent bg-accent-soft" : "border-line-strong bg-raised hover:border-accent"
               }`}
             >
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-lg">⚡</span>
-                <span className={`text-sm font-semibold ${ !useCvTracking ? "text-accent" : "text-ink" }`}>
-                  Fast Mode
-                </span>
-                <span className="ml-auto rounded-sm bg-raised-2 px-1.5 py-0.5 font-mono text-[10px] text-ink-faint">
-                  ~2–3 min
-                </span>
+              <div className="flex w-full items-center justify-between">
+                <span className="font-semibold text-ink">Fast Mode</span>
+                <span className="rounded-sm bg-line px-2 py-0.5 font-mono text-[11px] text-ink-dim">~2-3 min</span>
               </div>
-              <div className="text-xs text-ink-dim leading-relaxed">
-                Gemini segments from video alone. No CV tracking. Great for quick estimates.
-              </div>
+              <span className="text-sm text-ink-dim">Gemini handles segmentation visually. Precision within ±1s. Best for quick estimates.</span>
             </button>
-
-            {/* Accurate Mode */}
             <button
               type="button"
               onClick={() => setUseCvTracking(true)}
-              className={`rounded-md border-[1.5px] px-4 py-3.5 text-left transition-all ${
-                useCvTracking
-                  ? "border-va bg-va-soft/40"
-                  : "border-line-strong bg-raised hover:border-va/60"
+              className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border p-4 text-left transition-colors ${
+                useCvTracking ? "border-accent bg-accent-soft" : "border-line-strong bg-raised hover:border-accent"
               }`}
             >
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-lg">🎯</span>
-                <span className={`text-sm font-semibold ${ useCvTracking ? "text-va" : "text-ink" }`}>
-                  Accurate Mode
-                </span>
-                <span className="ml-auto rounded-sm bg-raised-2 px-1.5 py-0.5 font-mono text-[10px] text-ink-faint">
-                  ~8–10 min
-                </span>
+              <div className="flex w-full items-center justify-between">
+                <span className="font-semibold text-ink">Accurate Mode</span>
+                <span className="rounded-sm bg-line px-2 py-0.5 font-mono text-[11px] text-ink-dim">~8-10 min</span>
               </div>
-              <div className="text-xs text-ink-dim leading-relaxed">
-                CV-anchored timestamps via MediaPipe + YOLO. Best for final audit reports.
-              </div>
+              <span className="text-sm text-ink-dim">CV tracks hand states (YOLO + MediaPipe). Precision ±0.25s. Best for final audit reports.</span>
             </button>
           </div>
         </div>

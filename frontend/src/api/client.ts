@@ -20,7 +20,7 @@ export interface AnalyzeMeta {
   activityDescription: string;
   stationNo?: string;
   activityNo?: string;
-  useCvTracking?: boolean; // true = Accurate Mode (default), false = Fast Mode
+  useCvTracking: boolean;
 }
 
 export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobStatusResponse> {
@@ -29,8 +29,8 @@ export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobSt
   form.append("activity_description", meta.activityDescription);
   if (meta.stationNo) form.append("station_no", meta.stationNo);
   if (meta.activityNo) form.append("activity_no", meta.activityNo);
-  // FastAPI reads booleans from form fields as strings: "true"/"false"
-  form.append("use_cv_tracking", meta.useCvTracking === false ? "false" : "true");
+  // URLSearchParams/FormData handles booleans as strings, backend FastAPI casts it
+  form.append("use_cv_tracking", meta.useCvTracking ? "true" : "false");
   const res = await fetch(`${BASE}/analyze`, { method: "POST", body: form });
   return handle<JobStatusResponse>(res);
 }
@@ -39,6 +39,7 @@ export async function analyzeSampleVideo(meta: AnalyzeMeta): Promise<JobStatusRe
   const params = new URLSearchParams({ activity_description: meta.activityDescription });
   if (meta.stationNo) params.set("station_no", meta.stationNo);
   if (meta.activityNo) params.set("activity_no", meta.activityNo);
+  // Note: analyze/demo doesn't take use_cv_tracking since it's hardcoded, but we keep the signature clean
   const res = await fetch(`${BASE}/analyze/demo?${params.toString()}`, { method: "POST" });
   return handle<JobStatusResponse>(res);
 }

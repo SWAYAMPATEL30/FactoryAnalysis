@@ -106,7 +106,6 @@ def _create_job(
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
-        "use_cv_tracking": use_cv_tracking,
     }
 
     background_tasks.add_task(
@@ -140,11 +139,9 @@ def _process_video_job(
         blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
         blur_faces(raw_video_path, blurred_path)
 
-        # Stage 3: CV tracking — optional. When use_cv_tracking=True (Accurate Mode),
-        # MediaPipe + YOLO produce objective hand-state timing events that anchor
-        # Stage 4 segment boundaries to real measured frame transitions (~6-7 min on CPU).
-        # When use_cv_tracking=False (Fast Mode), this is skipped entirely and
-        # Gemini segments the video from vision alone (~2-3 min total).
+        # 2. Stage 3: CV tracking (optional — skipped in Fast Mode)
+        # When use_cv_tracking=False, Gemini handles segmentation alone from the
+        # video. Saves ~6-7 minutes at the cost of ±1s timestamp precision.
         JOBS[job_id]["phase"] = "PREPROCESSING"
         motion_events = None
         if use_cv_tracking:
@@ -210,10 +207,10 @@ async def analyze_video(
 ):
     """Upload a factory floor video clip to launch automated MOST study analysis.
 
-    Set use_cv_tracking=false for Fast Mode (~2-3 min): Gemini segments the video
-    from vision alone, skipping MediaPipe+YOLO CV tracking.
-    Set use_cv_tracking=true (default) for Accurate Mode (~8-10 min): CV tracking
-    anchors segment boundaries to objectively measured hand-state transitions.
+    use_cv_tracking=true  → Accurate Mode: CV hand tracking anchors segment boundaries
+                            (~8-10 min, ±0.25s timestamp precision).
+    use_cv_tracking=false → Fast Mode: Gemini segments the video alone
+                            (~2-3 min, ±1s timestamp precision).
     """
     job_id = str(uuid.uuid4())
     raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
