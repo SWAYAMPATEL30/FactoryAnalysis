@@ -1,12 +1,13 @@
 # ==========================================
 # Stage 1: Build the React Frontend
 # ==========================================
-FROM node:18-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Copy frontend package files
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
+
 
 # Copy the rest of the frontend source
 COPY frontend/ ./
