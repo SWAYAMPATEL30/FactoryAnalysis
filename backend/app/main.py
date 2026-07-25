@@ -94,6 +94,7 @@ def _create_job(
     activity_description: str,
     station_no: str,
     activity_no: str,
+    use_cv_tracking: bool = True,
 ) -> str:
     output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
 
@@ -105,6 +106,7 @@ def _create_job(
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
+        "use_cv_tracking": use_cv_tracking,
     }
 
     background_tasks.add_task(
@@ -115,6 +117,7 @@ def _create_job(
         activity_description,
         station_no,
         activity_no,
+        use_cv_tracking,
     )
     return job_id
 
@@ -126,6 +129,7 @@ def _process_video_job(
     activity_desc: str,
     station_no: str = "",
     activity_no: str = "",
+    use_cv_tracking: bool = True,
 ) -> None:
     try:
         JOBS[job_id]["status"] = "PROCESSING"
@@ -136,16 +140,19 @@ def _process_video_job(
         blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
         blur_faces(raw_video_path, blurred_path)
 
-        # 2. Stage 3: CV tracking — produces objective hand-state timing events
-        # that anchor Stage 4 segment boundaries to real measured transitions.
-        # This matches the original CLI (run_phase0.py) which always ran CVTracker.
-        # Without this, Gemini works blind, uses more tokens, fails more, exhausts quota faster.
+        # Stage 3: CV tracking — optional. When use_cv_tracking=True (Accurate Mode),
+        # MediaPipe + YOLO produce objective hand-state timing events that anchor
+        # Stage 4 segment boundaries to real measured frame transitions (~6-7 min on CPU).
+        # When use_cv_tracking=False (Fast Mode), this is skipped entirely and
+        # Gemini segments the video from vision alone (~2-3 min total).
         JOBS[job_id]["phase"] = "PREPROCESSING"
-        try:
-            tracker = CVTracker(sample_fps=4.0)
-            motion_events = tracker.build_motion_event_stream(blurred_path)
-        except Exception:
-            motion_events = None  # non-fatal: Stage 4 degrades gracefully without events
+        motion_events = None
+        if use_cv_tracking:
+            try:
+                tracker = CVTracker(sample_fps=4.0)
+                motion_events = tracker.build_motion_event_stream(blurred_path)
+            except Exception:
+                motion_events = None  # non-fatal: Stage 4 degrades gracefully
 
         # 3. Gemini Client & upload
         JOBS[job_id]["phase"] = "UPLOADING"
@@ -199,8 +206,15 @@ async def analyze_video(
     activity_description: str = "ASSY WITH PRESS OPERATION",
     station_no: str = "",
     activity_no: str = "",
+    use_cv_tracking: bool = True,
 ):
-    """Upload a factory floor video clip to launch automated MOST study analysis."""
+    """Upload a factory floor video clip to launch automated MOST study analysis.
+
+    Set use_cv_tracking=false for Fast Mode (~2-3 min): Gemini segments the video
+    from vision alone, skipping MediaPipe+YOLO CV tracking.
+    Set use_cv_tracking=true (default) for Accurate Mode (~8-10 min): CV tracking
+    anchors segment boundaries to objectively measured hand-state transitions.
+    """
     job_id = str(uuid.uuid4())
     raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
 
@@ -217,7 +231,7 @@ async def analyze_video(
                 raise HTTPException(status_code=413, detail="File exceeds 512 MB limit")
             out.write(chunk)
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no)
+    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no, use_cv_tracking)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 

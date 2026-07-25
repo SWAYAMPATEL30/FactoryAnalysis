@@ -20,6 +20,7 @@ export interface AnalyzeMeta {
   activityDescription: string;
   stationNo?: string;
   activityNo?: string;
+  useCvTracking?: boolean; // true = Accurate Mode (default), false = Fast Mode
 }
 
 export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobStatusResponse> {
@@ -28,6 +29,8 @@ export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobSt
   form.append("activity_description", meta.activityDescription);
   if (meta.stationNo) form.append("station_no", meta.stationNo);
   if (meta.activityNo) form.append("activity_no", meta.activityNo);
+  // FastAPI reads booleans from form fields as strings: "true"/"false"
+  form.append("use_cv_tracking", meta.useCvTracking === false ? "false" : "true");
   const res = await fetch(`${BASE}/analyze`, { method: "POST", body: form });
   return handle<JobStatusResponse>(res);
 }
