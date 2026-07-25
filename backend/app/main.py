@@ -566,3 +566,18 @@ async def submit_human_review(job_id: str, review: ReviewSubmission):
 
     return {"status": "SUCCESS", "updated_row": updated_row.model_dump()}
 
+
+# Serve Production Frontend (if built)
+from fastapi.staticfiles import StaticFiles
+frontend_dist = ROOT_DIR / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        file_path = frontend_dist / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")
