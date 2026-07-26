@@ -12,7 +12,8 @@ except Exception as e:
 
 try:
     from ultralytics import YOLO
-    _ = YOLO("yolov8s-world.pt")
-    print("YOLO-World weights pre-downloaded.")
+    model = YOLO("yolov8s-world.pt")
+    model.set_classes(["person", "tool", "part", "bin", "screwdriver"])
+    print("YOLO-World weights and CLIP text model pre-downloaded.")
 except Exception as e:
     print(f"YOLO model download skipped: {e}")
