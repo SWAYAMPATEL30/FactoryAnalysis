@@ -43,11 +43,22 @@ COPY data/ ../data/
 # Copy built React app into frontend/dist/ where main.py expects it
 COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 
+# ── EXTREME MEMORY OPTIMIZATION FOR RAILWAY FREE TIER (500MB RAM) ─────────────
+# MALLOC_ARENA_MAX=2 prevents glibc memory fragmentation (saves ~100MB+ RAM)
+ENV MALLOC_ARENA_MAX=2
+# Restrict all underlying C/C++ libraries to 1 thread to avoid thread-pool memory overhead
+ENV OMP_NUM_THREADS=1
+ENV OPENBLAS_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV VECLIB_MAXIMUM_THREADS=1
+ENV NUMEXPR_NUM_THREADS=1
+# ──────────────────────────────────────────────────────────────────────────────
+
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
 # ── Cache-bust: increment to force a full re-download on every build ───────────
-ARG CACHEBUST=6
+ARG CACHEBUST=7
 
 # ── Pre-download ALL model weights at build time ───────────────────────────────
 # download_models.py downloads YOLO-World (338MB) + MediaPipe models and bakes

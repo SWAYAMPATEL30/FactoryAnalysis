@@ -135,6 +135,15 @@ class CVTracker:
             except ImportError:
                 pass
 
+        try:
+            import torch
+            torch.set_num_threads(1)
+        except ImportError:
+            pass
+
+        import gc
+        gc.collect()
+
         from ultralytics import YOLO
 
         self._object_detector = YOLO(OBJECT_DETECTION_MODEL)
