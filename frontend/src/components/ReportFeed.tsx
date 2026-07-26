@@ -54,7 +54,7 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
   }, [activeIndex, autoFollow]);
 
   return (
-    <div className="flex max-h-[620px] flex-col rounded-md border border-line bg-raised">
+    <div className="flex h-full max-h-[500px] flex-col rounded-md border border-line bg-raised">
       <div className="flex items-center justify-between border-b border-line px-4.5 py-3.5">
         <div className="text-sm font-semibold text-ink">
           Report {generating ? "— generating" : `— ${rows.length} motions`}

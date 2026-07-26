@@ -168,16 +168,19 @@ export function ReviewConsole() {
           </>
         )}
 
-        <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <VideoTimeline
-            videoSrc={videoUrl(jobId)}
-            videoRef={videoRef}
-            rows={rows}
-            activeIndex={activeIndex}
-            currentTime={currentTime}
-            duration={duration}
-            onSeek={seek}
-          />
+        <div className="mb-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+          <div className="flex flex-col gap-4">
+            <VideoTimeline
+              videoSrc={videoUrl(jobId)}
+              videoRef={videoRef}
+              rows={rows}
+              activeIndex={activeIndex}
+              currentTime={currentTime}
+              duration={duration}
+              onSeek={seek}
+            />
+            {rows.length > 0 && <TotalsPanel rows={rows} />}
+          </div>
           <ReportFeed
             rows={rows}
             activeIndex={activeIndex}
@@ -186,12 +189,6 @@ export function ReviewConsole() {
             autoFollow={isPlaying}
           />
         </div>
-
-        {rows.length > 0 && (
-          <div className="mb-8">
-            <TotalsPanel rows={rows} />
-          </div>
-        )}
 
         {isDone && flagsQuery.data && <ReviewFlagPanel jobId={jobId} flags={flagsQuery.data} />}
       </div>
