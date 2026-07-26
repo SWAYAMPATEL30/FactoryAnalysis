@@ -1,7 +1,5 @@
-"""FastAPI REST Service Layer (Roadmap Item 3).
-
-Exposes full REST API for video upload, automated MOST pipeline analysis execution,
-job status tracking, human review flag clearance, and Excel report downloading.
+"""FastAPI main application entrypoint.
+Version: 1.2.0 - Production RAM & CLIP Model Optimization
 """
 from __future__ import annotations
 
