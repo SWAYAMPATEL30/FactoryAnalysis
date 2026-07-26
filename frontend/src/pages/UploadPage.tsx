@@ -12,6 +12,7 @@ export function UploadPage() {
   const [activityNo, setActivityNo] = useState("");
   const [fastMode, setFastMode] = useState(true);
   const [dragging, setDragging] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useMutation({
@@ -25,7 +26,19 @@ export function UploadPage() {
   });
 
   function pickFile(f: File | null) {
-    if (f && !f.type.startsWith("video/")) return;
+    setFileError(null);
+    if (!f) return;
+    
+    if (!f.type.startsWith("video/")) {
+      setFileError("Please upload a video file (.mp4, .mov, etc)");
+      return;
+    }
+    
+    if (f.size > 512 * 1024 * 1024) {
+      setFileError("File is too large. Maximum size is 512MB.");
+      return;
+    }
+    
     setFile(f);
   }
 
@@ -161,10 +174,29 @@ export function UploadPage() {
             pickFile(e.dataTransfer.files[0] ?? null);
           }}
           onClick={() => inputRef.current?.click()}
-          className={`cursor-pointer rounded-md border-[1.5px] border-dashed px-6 py-10 text-center transition-colors ${
-            dragging ? "border-accent bg-accent-soft" : "border-line-strong bg-raised hover:border-accent"
+          className={`cursor-pointer rounded-md border-2 border-dashed px-8 py-16 text-center transition-all duration-300 relative overflow-hidden group ${
+            dragging ? "border-accent bg-accent-soft scale-[1.02]" : fileError ? "border-nva bg-nva-soft hover:border-nva/70" : "border-line-strong bg-raised hover:border-accent hover:bg-raised-2"
           }`}
         >
+          {/* Animated Idle Factory Illustration */}
+          {!file && (
+            <div className="absolute inset-0 pointer-events-none opacity-5 group-hover:opacity-10 transition-opacity duration-700 flex items-center justify-center -z-10">
+              <svg viewBox="0 0 100 100" className="w-64 h-64 text-ink">
+                {/* Building Base */}
+                <path d="M10 90h80v-40h-80z" fill="currentColor" />
+                {/* Roof sections */}
+                <path d="M10 50l15-20v20h-15z" fill="currentColor" />
+                <path d="M30 50l15-20v20h-15z" fill="currentColor" />
+                <path d="M50 50l15-20v20h-15z" fill="currentColor" />
+                <path d="M70 50l15-20v20h-15z" fill="currentColor" />
+                {/* Animated smoke */}
+                <circle cx="20" cy="20" r="4" fill="currentColor" className="animate-[ping_3s_infinite_ease-out]" />
+                <circle cx="40" cy="15" r="5" fill="currentColor" className="animate-[ping_4s_infinite_ease-out]" style={{ animationDelay: '1s' }} />
+                <circle cx="60" cy="22" r="3" fill="currentColor" className="animate-[ping_3.5s_infinite_ease-out]" style={{ animationDelay: '0.5s' }} />
+              </svg>
+            </div>
+          )}
+
           <input
             ref={inputRef}
             type="file"
@@ -188,14 +220,19 @@ export function UploadPage() {
             />
           </svg>
           {file ? (
-            <div className="font-medium text-ink">{file.name}</div>
+            <div className="font-display text-2xl font-semibold text-ink text-balance">{file.name}</div>
           ) : (
             <>
-              <div className="mb-1 font-medium text-ink">Drop a work-cycle video, or click to browse</div>
+              <div className="mb-2 font-display text-xl font-semibold text-ink">Drop a work-cycle video, or click to browse</div>
               <div className="text-sm text-ink-faint">
-                Faces are blurred automatically before anything leaves this screen
+                Faces are blurred automatically before anything leaves this screen. Up to 512MB.
               </div>
             </>
+          )}
+          {fileError && (
+            <div className="mt-4 inline-block rounded-sm bg-nva-soft px-3 py-1 font-mono text-xs font-semibold text-nva">
+              {fileError}
+            </div>
           )}
         </div>
 

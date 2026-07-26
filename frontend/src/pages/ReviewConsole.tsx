@@ -8,6 +8,12 @@ import { ReportFeed } from "../components/ReportFeed";
 import { TotalsPanel } from "../components/TotalsPanel";
 import { ReviewFlagPanel } from "../components/ReviewFlagPanel";
 import { CompletionBanner } from "../components/CompletionBanner";
+import { LiveLogPanel } from "../components/LiveLogPanel";
+import { EfficiencyGauge } from "../components/EfficiencyGauge";
+import { VaNvaDonut } from "../components/VaNvaDonut";
+import { useJobStream } from "../hooks/useJobStream";
+import { useToast } from "../components/ToastProvider";
+import type { TaxonomyBucket } from "../api/types";
 import { getJobStatus, getJobRows, getJobFlags, excelDownloadUrl, videoUrl } from "../api/client";
 
 const TERMINAL = new Set(["COMPLETED", "FAILED"]);
@@ -18,6 +24,7 @@ export function ReviewConsole() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const { toast } = useToast();
 
   const statusQuery = useQuery({
     queryKey: ["status", jobId],
@@ -30,6 +37,14 @@ export function ReviewConsole() {
   });
 
   const isDone = statusQuery.data?.status === "COMPLETED";
+  const isFailed = statusQuery.data?.status === "FAILED";
+  const { events } = useJobStream(jobId, isDone || isFailed);
+
+  // Trigger toasts on completion (only fire once)
+  useEffect(() => {
+    if (isDone) toast("Analysis complete", "Your MOST report is ready.", "success");
+    if (isFailed) toast("Analysis failed", "There was an error processing the video.", "error");
+  }, [isDone, isFailed, toast]);
 
   const rowsQuery = useQuery({
     queryKey: ["rows", jobId],
@@ -83,6 +98,23 @@ export function ReviewConsole() {
   const stationNo = rows[0]?.station_no;
   const activityNo = rows[0]?.activity_no;
 
+  // Compute sums for the dashboard charts
+  const sums: Record<TaxonomyBucket, number> = {
+    VA: 0,
+    SVA: 0,
+    "NVA-N": 0,
+    NVA: 0,
+    Noise: 0,
+  };
+  let totalSec = 0;
+  for (const r of rows) {
+    sums.VA += r.va_sec;
+    sums.SVA += r.sva_sec;
+    sums["NVA-N"] += r.nvan_sec;
+    sums.NVA += r.nva_sec;
+    totalSec += r.total_time_sec;
+  }
+
   return (
     <div className="min-h-screen">
       <TopBar />
@@ -107,17 +139,33 @@ export function ReviewConsole() {
         </div>
 
         {!isDone && (
-          <div className="mb-8 rounded-md border border-line bg-raised p-5">
-            <PhaseProgress phase={phase} />
+          <div className="mb-8">
+            <div className="rounded-md border border-line bg-raised p-5">
+              <PhaseProgress phase={phase} />
+            </div>
+            <LiveLogPanel events={events} />
           </div>
         )}
 
         {isDone && statusQuery.data?.elapsed_sec != null && statusQuery.data?.estimated_manual_sec != null && (
-          <CompletionBanner
-            elapsedSec={statusQuery.data.elapsed_sec}
-            estimatedManualSec={statusQuery.data.estimated_manual_sec}
-            rowCount={rows.length}
-          />
+          <>
+            <CompletionBanner
+              elapsedSec={statusQuery.data.elapsed_sec}
+              estimatedManualSec={statusQuery.data.estimated_manual_sec}
+              rowCount={rows.length}
+            />
+            
+            {rows.length > 0 && (
+              <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
+                <div className="md:col-span-1">
+                  <EfficiencyGauge vaSec={sums.VA} totalSec={totalSec} />
+                </div>
+                <div className="md:col-span-2">
+                  <VaNvaDonut sums={sums} />
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">

@@ -67,6 +67,14 @@ export function videoUrl(jobId: string): string {
   return `${BASE}/jobs/${jobId}/video`;
 }
 
+export function streamUrl(jobId: string): string {
+  return `${BASE}/jobs/${jobId}/stream`;
+}
+
+export function previewUrl(jobId: string): string {
+  return `${BASE}/jobs/${jobId}/preview`;
+}
+
 export interface ReviewSubmission {
   segment_id: number;
   data_card: DataCard;
