@@ -96,10 +96,15 @@ class _HandState:
 
 
 class CVTracker:
-    def __init__(self, sample_fps: float = 4.0, machine_roi: tuple[int, int, int, int] | None = None):
+    """Stage 3: Pure Computer Vision tracking (No LLM/VLM).
+    Analyzes video using MediaPipe (hands) and YOLO-World (objects).
+    """
+
+    def __init__(self, sample_fps: float = 4.0, fast_mode: bool = False, machine_roi: tuple[int, int, int, int] | None = None):
         """machine_roi is (x, y, w, h) in pixels; None = whole frame."""
         ensure_models_downloaded()
         self.sample_fps = sample_fps
+        self.fast_mode = fast_mode
         self.machine_roi = machine_roi
 
         self._hand_landmarker = mp_vision.HandLandmarker.create_from_options(
@@ -139,6 +144,14 @@ class CVTracker:
             ok, frame = cap.read()
             if not ok:
                 break
+            
+            if self.fast_mode:
+                # Downscale high-resolution frames to 640px for fast CV inference
+                h, w = frame.shape[:2]
+                if w > 640:
+                    target_h = max(2, int(h * (640.0 / w)))
+                    frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_NEAREST)
+                    
             yield t, frame
             t += step
         cap.release()
@@ -207,14 +220,26 @@ class CVTracker:
         hand_states = {"L": _HandState(), "R": _HandState()}
         prev_gray = None
         prev_t = None
+        
+        sample_idx = 0
+        cached_objects: list[dict] = []
 
         for t, frame in self._sample_frames(video_path):
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             hand_positions = self._detect_hands(rgb)
-            objects = self._detect_objects(frame)
+            
+            if self.fast_mode:
+                # Run heavy YOLO object detector every 3rd sample (~1.5s at 2fps), reusing cached boxes
+                if sample_idx % 3 == 0:
+                    cached_objects = self._detect_objects(frame)
+                objects = cached_objects
+            else:
+                objects = self._detect_objects(frame)
+                
             machine_state = self._machine_state(prev_gray, gray)
+            sample_idx += 1
 
             for hand_label, state in hand_states.items():
                 pos = hand_positions.get(hand_label)

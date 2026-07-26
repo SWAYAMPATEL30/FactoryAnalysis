@@ -94,6 +94,7 @@ def _create_job(
     activity_description: str,
     station_no: str,
     activity_no: str,
+    fast_mode: bool = False,
 ) -> str:
     output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
 
@@ -105,6 +106,7 @@ def _create_job(
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
+        "fast_mode": fast_mode,
     }
 
     background_tasks.add_task(
@@ -115,6 +117,7 @@ def _create_job(
         activity_description,
         station_no,
         activity_no,
+        fast_mode,
     )
     return job_id
 
@@ -126,6 +129,7 @@ def _process_video_job(
     activity_desc: str,
     station_no: str = "",
     activity_no: str = "",
+    fast_mode: bool = False,
 ) -> None:
     try:
         JOBS[job_id]["status"] = "PROCESSING"
@@ -138,11 +142,12 @@ def _process_video_job(
 
         # 2. Stage 3: CV tracking — produces objective hand-state timing events
         # that anchor Stage 4 segment boundaries to real measured transitions.
-        # This matches the original CLI (run_phase0.py) which always ran CVTracker.
-        # Without this, Gemini works blind, uses more tokens, fails more, exhausts quota faster.
+        # If fast_mode is True, runs with 640px downscaling, 2fps, and 2/3 YOLO skipping (~30-45s).
+        # If fast_mode is False, runs full resolution, 4fps, tracking every frame (~7-10m).
         JOBS[job_id]["phase"] = "PREPROCESSING"
         try:
-            tracker = CVTracker(sample_fps=4.0)
+            fps = 2.0 if fast_mode else 4.0
+            tracker = CVTracker(sample_fps=fps, fast_mode=fast_mode)
             motion_events = tracker.build_motion_event_stream(blurred_path)
         except Exception:
             motion_events = None  # non-fatal: Stage 4 degrades gracefully without events
@@ -199,8 +204,13 @@ async def analyze_video(
     activity_description: str = "ASSY WITH PRESS OPERATION",
     station_no: str = "",
     activity_no: str = "",
+    fast_mode: bool = False,
 ):
-    """Upload a factory floor video clip to launch automated MOST study analysis."""
+    """Upload a factory floor video clip to launch automated MOST study analysis.
+    
+    If fast_mode=True, Stage 3 CV tracking uses aggressive optimizations (downscaling,
+    frame skipping, 2fps) to finish in ~30s instead of ~7 mins.
+    """
     job_id = str(uuid.uuid4())
     raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
 
@@ -217,7 +227,7 @@ async def analyze_video(
                 raise HTTPException(status_code=413, detail="File exceeds 512 MB limit")
             out.write(chunk)
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no)
+    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no, fast_mode)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 

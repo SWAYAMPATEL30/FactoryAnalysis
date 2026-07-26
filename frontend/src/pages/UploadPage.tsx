@@ -10,16 +10,17 @@ export function UploadPage() {
   const [activityDescription, setActivityDescription] = useState("ASSY WITH PRESS OPERATION");
   const [stationNo, setStationNo] = useState("");
   const [activityNo, setActivityNo] = useState("");
+  const [fastMode, setFastMode] = useState(true);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useMutation({
-    mutationFn: () => analyzeVideo(file!, { activityDescription, stationNo, activityNo }),
+    mutationFn: () => analyzeVideo(file!, { activityDescription, stationNo, activityNo, fastMode }),
     onSuccess: (data) => navigate(`/jobs/${data.job_id}`),
   });
 
   const sampleMutation = useMutation({
-    mutationFn: () => analyzeSampleVideo({ activityDescription, stationNo, activityNo }),
+    mutationFn: () => analyzeSampleVideo({ activityDescription, stationNo, activityNo, fastMode }),
     onSuccess: (data) => navigate(`/jobs/${data.job_id}`),
   });
 
@@ -97,6 +98,54 @@ export function UploadPage() {
               className="w-full rounded-md border border-line-strong bg-raised px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
               placeholder="e.g. ASSY WITH PRESS OPERATION"
             />
+          </div>
+        </div>
+
+        {/* Analysis Mode Toggle */}
+        <div className="mb-8">
+          <label className="mb-3 block text-xs font-medium uppercase tracking-wide text-ink-faint">
+            Analysis Mode
+          </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Fast Mode */}
+            <button
+              type="button"
+              onClick={() => setFastMode(true)}
+              className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border p-4 text-left transition-colors ${
+                fastMode ? "border-accent bg-accent-soft" : "border-line-strong bg-raised hover:border-accent"
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚡</span>
+                  <span className={`font-semibold ${ fastMode ? "text-accent" : "text-ink" }`}>Fast Mode</span>
+                </div>
+                <span className="rounded-sm bg-line px-2 py-0.5 font-mono text-[11px] text-ink-dim">~1-2 min</span>
+              </div>
+              <span className="text-sm text-ink-dim">
+                Optimized CV tracking (640p + 2fps + skipped frames). 90% faster. Best for quick estimates.
+              </span>
+            </button>
+            
+            {/* Accurate Mode */}
+            <button
+              type="button"
+              onClick={() => setFastMode(false)}
+              className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border p-4 text-left transition-colors ${
+                !fastMode ? "border-va bg-va-soft/40" : "border-line-strong bg-raised hover:border-va/60"
+              }`}
+            >
+              <div className="flex w-full items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🎯</span>
+                  <span className={`font-semibold ${ !fastMode ? "text-va" : "text-ink" }`}>Accurate Mode</span>
+                </div>
+                <span className="rounded-sm bg-line px-2 py-0.5 font-mono text-[11px] text-ink-dim">~8-10 min</span>
+              </div>
+              <span className="text-sm text-ink-dim">
+                High-fidelity CV tracking (full res + 4fps + tracks every frame). Best for final audit reports.
+              </span>
+            </button>
           </div>
         </div>
 
