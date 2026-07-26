@@ -67,18 +67,25 @@ export function VideoTimeline({ videoSrc, videoRef, rows, activeIndex, currentTi
           })}
           {total > 0 && (
             <div
-              className="pointer-events-none absolute -top-[3px] -bottom-[3px] z-10 w-0.5 bg-ink transition-[left] duration-150"
+              className="pointer-events-none absolute -top-[3px] -bottom-[3px] z-20 w-0.5 bg-ink transition-[left] duration-150"
               style={{ left: `${(currentTime / total) * 100}%` }}
             >
               <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-ink" />
+              
+              {/* Playhead Time Indicator */}
+              <div 
+                className="absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-ink px-1.5 py-0.5 font-mono text-[10px] text-raised shadow-sm"
+                style={{ 
+                  // Keep it from bleeding off the left or right edge
+                  transform: `translateX(calc(-50% + ${
+                    (currentTime / total) < 0.05 ? '20px' : (currentTime / total) > 0.95 ? '-20px' : '0px'
+                  }))` 
+                }}
+              >
+                {fmtTime(currentTime)} / {fmtTime(total)}
+              </div>
             </div>
           )}
-        </div>
-        <div className="mt-1.5 flex justify-between font-mono text-[10.5px] text-ink-faint">
-          <span>{fmtTime(0)}</span>
-          <span>
-            {fmtTime(currentTime)} / {fmtTime(total)}
-          </span>
         </div>
       </div>
     </div>
