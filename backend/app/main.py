@@ -201,10 +201,10 @@ def _process_video_job(
 async def analyze_video(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    activity_description: str = "ASSY WITH PRESS OPERATION",
-    station_no: str = "",
-    activity_no: str = "",
-    fast_mode: bool = False,
+    activity_description: str = Form("ASSY WITH PRESS OPERATION"),
+    station_no: str = Form(""),
+    activity_no: str = Form(""),
+    fast_mode: bool = Form(False),
 ):
     """Upload a factory floor video clip to launch automated MOST study analysis.
     
