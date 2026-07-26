@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "../components/TopBar";
 import { PhaseProgress } from "../components/PhaseProgress";
@@ -31,7 +31,12 @@ export function ReviewConsole() {
     queryKey: ["status", jobId],
     queryFn: () => getJobStatus(jobId!),
     enabled: !!jobId,
-    refetchInterval: (query) => (query.state.data && TERMINAL.has(query.state.data.status) ? false : 2000),
+    retry: false,
+    refetchInterval: (query) => {
+      if (query.state.error) return false;
+      if (query.state.data && TERMINAL.has(query.state.data.status)) return false;
+      return 2000;
+    },
     // A multi-minute analysis shouldn't freeze its status just because the
     // engineer switched tabs -- keep polling while backgrounded.
     refetchIntervalInBackground: true,
@@ -93,6 +98,31 @@ export function ReviewConsole() {
   }
 
   if (!jobId) return null;
+
+  if (statusQuery.isError) {
+    return (
+      <div className="min-h-screen">
+        <TopBar />
+        <div className="mx-auto max-w-xl px-6 py-20 text-center">
+          <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-raised-2 text-ink-faint">
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="mb-2 font-display text-2xl font-bold uppercase text-ink">Job Not Found or Expired</h2>
+          <p className="mb-6 text-sm text-ink-dim">
+            This analysis job ID is no longer active in server memory (likely because the server was restarted for a code deployment).
+          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink no-underline"
+          >
+            Start New Analysis
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const phase = statusQuery.data?.phase ?? "QUEUED";
   const generating = !isDone;
