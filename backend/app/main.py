@@ -203,7 +203,7 @@ def _process_video_job(
         # 2. Stage 3: CV tracking — produces objective hand-state timing events
         JOBS[job_id]["phase"] = "PREPROCESSING"
         try:
-            tracker = CVTracker(sample_fps=2.0)
+            tracker = CVTracker(sample_fps=10.0)
             motion_events = tracker.build_motion_event_stream(blurred_path)
         except Exception:
             motion_events = None  # non-fatal: Stage 4 degrades gracefully without events

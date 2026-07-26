@@ -21,6 +21,7 @@ FROM python:3.11-slim AS production
 
 # Install system dependencies (OpenCV requires libglib2.0-0, though we use headless)
 RUN apt-get update && apt-get install -y \
+    ffmpeg \
     libgl1 \
     libglib2.0-0 \
     libsm6 \

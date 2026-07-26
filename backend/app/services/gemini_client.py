@@ -94,7 +94,7 @@ EXAMPLES OF RICH MICRO-MOTION DESCRIPTIONS (strictly segmented on every micro-tr
   "An operator laying aside the dispensing tool onto the workstation rack" (human_movement_state: RELEASE, machine_state: IDLE)
 
 For each micro-activity segment, output:
-  - t_start_sec, t_end_sec: exact micro-boundary timestamps in seconds
+  - t_start_sec, t_end_sec: exact micro-boundary timestamps in seconds. CRITICAL RULE: DO NOT round timestamps to whole numbers or half seconds (e.g., avoid 1.0, 1.5, 2.0). You MUST provide highly precise decimal timestamps (e.g., 1.3, 2.7, 4.2) that exactly match the physical motion boundaries down to the fraction of a second.
   - description: rich, detailed natural human language sentence describing the action
   - human_movement_state: state of movement ("MOVE", "GRASP", "HOLD", "RELEASE")
   - machine_state: state of machine ("IDLE", "ACTUATING")
