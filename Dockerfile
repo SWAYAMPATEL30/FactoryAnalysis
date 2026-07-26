@@ -14,7 +14,6 @@ FROM python:3.11-slim
 # System dependencies required by OpenCV (headless) and MediaPipe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
-    curl \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
@@ -22,6 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Set PYTHONPATH so 'from app.pipeline...' works at build time
+ENV PYTHONPATH=/app
 
 # Install Python dependencies (layer cached until requirements.txt changes)
 COPY backend/requirements.txt ./
@@ -39,13 +41,28 @@ COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
-# ── Download YOLO-World weights at BUILD time (338MB) ─────────────────────────
-# Using curl directly in the Dockerfile (not a Python script) so Docker creates
-# a fresh uncached layer and the file is guaranteed on disk before the container
-# starts. ultralytics looks for "yolov8s-world.pt" relative to CWD (/app).
-RUN curl -L -o /app/yolov8s-world.pt \
-    "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s-world.pt" \
-    && echo "YOLO-World weights downloaded: $(du -sh /app/yolov8s-world.pt | cut -f1)"
+# ── Cache-bust: increment this value to force a full re-download every build ──
+ARG CACHEBUST=3
+
+# ── Download YOLO-World weights at BUILD time via ultralytics Python API ───────
+# ultralytics knows the correct CDN URL and handles all redirects automatically.
+# We alias open_clip -> clip first so YOLO-World initialises without openai-clip.
+RUN python -c "\
+import sys; \
+try: \
+    import clip; \
+except ImportError: \
+    try: \
+        import open_clip; \
+        sys.modules['clip'] = open_clip; \
+    except Exception: \
+        pass; \
+from ultralytics import YOLO; \
+model = YOLO('yolov8s-world.pt'); \
+import os; \
+size = os.path.getsize('yolov8s-world.pt') // (1024*1024); \
+print(f'YOLO-World weights ready: {size}MB at yolov8s-world.pt'); \
+"
 
 # ── Pre-download MediaPipe models at BUILD time ────────────────────────────────
 RUN python scripts/download_models.py
