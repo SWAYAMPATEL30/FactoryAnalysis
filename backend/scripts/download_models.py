@@ -17,12 +17,22 @@ except ImportError:
     except Exception as e:
         print(f"clip/open_clip alias skipped: {e}")
 
-# ── 1. YOLO-World weights (338MB) ─────────────────────────────────────────────
+# ── 1. YOLO-World weights & CLIP text encoder (338MB) ───────────────────────
 try:
     from ultralytics import YOLO
+    from app.config.cv_vocabulary import load_cv_vocabulary
     model = YOLO("yolov8s-world.pt")
+    
+    # CRITICAL: We must call set_classes() at build time. 
+    # YOLO-World downloads the 338MB CLIP text encoder weights (ViT-B/32) 
+    # the first time set_classes() is called. If we don't do this here, 
+    # it downloads at runtime and causes the OOM kill.
+    vocab = load_cv_vocabulary()
+    model.set_classes(vocab.object_queries)
+    
     size_mb = os.path.getsize("yolov8s-world.pt") // (1024 * 1024)
     print(f"YOLO-World weights ready: {size_mb}MB at yolov8s-world.pt")
+    print("CLIP text encoder weights pre-warmed successfully.")
 except Exception as e:
     print(f"YOLO-World pre-warm failed: {e}")
     raise  # fail the build loudly so Railway doesn't silently skip this

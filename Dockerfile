@@ -25,6 +25,10 @@ WORKDIR /app
 # Set PYTHONPATH so 'from app.pipeline...' works at build time
 ENV PYTHONPATH=/app
 
+# Force all caches (like HuggingFace/CLIP weights) to stay inside /app
+ENV XDG_CACHE_HOME=/app/.cache
+ENV TORCH_HOME=/app/.cache/torch
+
 # Install Python dependencies (layer cached until requirements.txt changes)
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
@@ -42,7 +46,7 @@ COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 RUN mkdir -p ../data/uploads
 
 # ── Cache-bust: increment to force a full re-download on every build ───────────
-ARG CACHEBUST=4
+ARG CACHEBUST=5
 
 # ── Pre-download ALL model weights at build time ───────────────────────────────
 # download_models.py downloads YOLO-World (338MB) + MediaPipe models and bakes
