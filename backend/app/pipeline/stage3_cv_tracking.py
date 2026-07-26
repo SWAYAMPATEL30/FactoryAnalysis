@@ -155,12 +155,12 @@ class CVTracker:
             if not ok:
                 break
             
-            # Always cap frame width to 640px for CV model processing
-            # (YOLO & MediaPipe operate natively on 640p; this reduces RAM from ~500MB to <200MB)
-            h, w = frame.shape[:2]
-            if w > 640:
-                target_h = max(2, int(h * (640.0 / w)))
-                frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_NEAREST)
+            if self.fast_mode:
+                # Downscale high-resolution frames to 640px for fast CV inference
+                h, w = frame.shape[:2]
+                if w > 640:
+                    target_h = max(2, int(h * (640.0 / w)))
+                    frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_NEAREST)
                     
             yield t, frame
             t += step
