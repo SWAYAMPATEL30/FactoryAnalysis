@@ -205,12 +205,17 @@ async def analyze_video(
     station_no: str = Form(""),
     activity_no: str = Form(""),
     fast_mode: bool = Form(False),
+    use_cv_tracking: str = Form(None),
 ):
     """Upload a factory floor video clip to launch automated MOST study analysis.
     
     If fast_mode=True, Stage 3 CV tracking uses aggressive optimizations (downscaling,
     frame skipping, 2fps) to finish in ~30s instead of ~7 mins.
     """
+    # Backwards compatibility for cached frontends
+    if use_cv_tracking == "false":
+        fast_mode = True
+        
     job_id = str(uuid.uuid4())
     raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
 
