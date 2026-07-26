@@ -425,7 +425,7 @@ async def get_job_rows(job_id: str):
     """Returns whatever MostRow data currently exists for this job, as JSON."""
     job = JOBS.get(job_id)
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+        return []
     engine: HumanReviewEngine | None = job.get("review_engine")
     rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
     return [r.model_dump() for r in sorted(rows, key=lambda r: r.s_no)]
