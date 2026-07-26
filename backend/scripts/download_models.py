@@ -12,8 +12,10 @@ except Exception as e:
 
 try:
     from ultralytics import YOLO
+    from app.config.cv_vocabulary import load_cv_vocabulary
     model = YOLO("yolov8s-world.pt")
-    model.set_classes(["person", "tool", "part", "bin", "screwdriver"])
-    print("YOLO-World weights and CLIP text model pre-downloaded.")
+    queries = load_cv_vocabulary().object_queries
+    model.set_classes(queries)
+    print(f"YOLO-World weights and CLIP text model pre-downloaded for {len(queries)} vocabulary queries.")
 except Exception as e:
     print(f"YOLO model download skipped: {e}")
