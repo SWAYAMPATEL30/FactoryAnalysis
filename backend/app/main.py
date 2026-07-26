@@ -160,17 +160,25 @@ def _process_video_job(
         _emit(job_id, "PREPROCESSING", "done", "Face blur complete", 1.0)
 
         # Stage 3: CV tracking
+        # Skipped entirely when DISABLE_CV_TRACKING=1 (e.g. Railway free tier
+        # where loading the 338MB YOLO-World model OOM-kills the container).
         mode_label = "fast (640p, 2fps, skip frames)" if fast_mode else "accurate (full res, 4fps)"
-        _emit(job_id, "CV_TRACKING", "running", f"Running CV hand tracking [{mode_label}]…", 0.0)
-        JOBS[job_id]["phase"] = "PREPROCESSING"
-        try:
-            fps = 2.0 if fast_mode else 4.0
-            tracker = CVTracker(sample_fps=fps, fast_mode=fast_mode)
-            motion_events = tracker.build_motion_event_stream(blurred_path)
-            _emit(job_id, "CV_TRACKING", "done", f"Found {len(motion_events)} motion events", 1.0)
-        except Exception as cv_err:
+        import os as _os
+        if _os.environ.get("DISABLE_CV_TRACKING", "0") == "1":
             motion_events = None
-            _emit(job_id, "CV_TRACKING", "done", f"CV tracking skipped: {cv_err}", 1.0)
+            _emit(job_id, "CV_TRACKING", "done", "CV tracking disabled (low-RAM environment)", 1.0)
+        else:
+            _emit(job_id, "CV_TRACKING", "running", f"Running CV hand tracking [{mode_label}]…", 0.0)
+            JOBS[job_id]["phase"] = "PREPROCESSING"
+            try:
+                fps = 2.0 if fast_mode else 4.0
+                tracker = CVTracker(sample_fps=fps, fast_mode=fast_mode)
+                motion_events = tracker.build_motion_event_stream(blurred_path)
+                _emit(job_id, "CV_TRACKING", "done", f"Found {len(motion_events)} motion events", 1.0)
+            except Exception as cv_err:
+                motion_events = None
+                _emit(job_id, "CV_TRACKING", "done", f"CV tracking skipped: {cv_err}", 1.0)
+
 
         # Stage 4: Upload video to Gemini
         JOBS[job_id]["phase"] = "UPLOADING"
