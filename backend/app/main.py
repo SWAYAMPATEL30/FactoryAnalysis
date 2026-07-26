@@ -15,7 +15,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, Any, List
 
-from fastapi import FastAPI, BackgroundTasks, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles

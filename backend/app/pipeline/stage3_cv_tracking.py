@@ -125,6 +125,16 @@ class CVTracker:
             )
         )
 
+        try:
+            import clip
+        except ImportError:
+            try:
+                import open_clip
+                import sys
+                sys.modules["clip"] = open_clip
+            except ImportError:
+                pass
+
         from ultralytics import YOLO
 
         self._object_detector = YOLO(OBJECT_DETECTION_MODEL)
