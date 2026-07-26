@@ -30,12 +30,7 @@ export function ReviewConsole() {
     queryKey: ["status", jobId],
     queryFn: () => getJobStatus(jobId!),
     enabled: !!jobId,
-    refetchInterval: (query) => {
-      if (query.state.status === "error" || (query.state.data && TERMINAL.has(query.state.data.status))) {
-        return false;
-      }
-      return 2000;
-    },
+    refetchInterval: (query) => (query.state.data && TERMINAL.has(query.state.data.status) ? false : 2000),
     // A multi-minute analysis shouldn't freeze its status just because the
     // engineer switched tabs -- keep polling while backgrounded.
     refetchIntervalInBackground: true,
@@ -43,7 +38,7 @@ export function ReviewConsole() {
 
   const isDone = statusQuery.data?.status === "COMPLETED";
   const isFailed = statusQuery.data?.status === "FAILED";
-  const { events } = useJobStream(jobId, isDone || isFailed || statusQuery.isError);
+  const { events } = useJobStream(jobId, isDone || isFailed);
 
   // Trigger toasts on completion (only fire once)
   useEffect(() => {
@@ -54,8 +49,8 @@ export function ReviewConsole() {
   const rowsQuery = useQuery({
     queryKey: ["rows", jobId],
     queryFn: () => getJobRows(jobId!),
-    enabled: !!jobId && !statusQuery.isError,
-    refetchInterval: isDone || statusQuery.isError ? false : 2000,
+    enabled: !!jobId,
+    refetchInterval: isDone ? false : 2000,
     refetchIntervalInBackground: true,
   });
 
@@ -97,28 +92,6 @@ export function ReviewConsole() {
   }
 
   if (!jobId) return null;
-
-  if (statusQuery.isError) {
-    return (
-      <div className="min-h-screen">
-        <TopBar />
-        <div className="mx-auto max-w-md px-6 py-20 text-center">
-          <div className="rounded-md border border-line bg-raised p-8">
-            <div className="mb-3 text-2xl font-bold text-ink">Job Expired or Not Found</div>
-            <p className="mb-6 text-sm text-ink-dim">
-              Job <code className="font-mono text-accent">{jobId}</code> is no longer active in memory.
-            </p>
-            <a
-              href="/"
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink no-underline"
-            >
-              Upload new video
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const phase = statusQuery.data?.phase ?? "QUEUED";
   const generating = !isDone;

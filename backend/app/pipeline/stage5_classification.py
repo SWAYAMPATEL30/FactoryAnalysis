@@ -10,8 +10,6 @@ it comes back as a ReviewFlag for the mandatory Stage 8 human review gate.
 """
 from __future__ import annotations
 
-from google.genai import types
-
 from app.config.most_tables import load_most_tables
 from app.config.taxonomy import load_taxonomy
 from app.models.schemas import Classification, ReviewFlag, Segment
@@ -25,13 +23,13 @@ CONFIDENCE_THRESHOLD = 0.55
 
 
 def classify_segments(
-    client: GeminiClient,
-    segments: list[Segment],
-    video: str | bytes | types.File | None = None,
+    client: GeminiClient, segments: list[Segment]
 ) -> tuple[dict[int, Classification], list[ReviewFlag]]:
     """Returns (segment_id -> Classification for segments that passed
     validation, review flags for everything that didn't or was low
-    confidence). If video is provided, uses video payload for Accurate Mode visual inspection."""
+    confidence). A segment_id missing from the first dict always has a
+    corresponding flag in the second -- callers must not assume a row exists
+    for every input segment."""
     most_tables = load_most_tables()
     taxonomy = load_taxonomy()
 
@@ -40,10 +38,7 @@ def classify_segments(
         for s in segments
     ]
     drafts, model_version = client.classify_segments(
-        segments=draft_client_segments,
-        most_tables=most_tables,
-        taxonomy=taxonomy,
-        video=video,
+        segments=draft_client_segments, most_tables=most_tables, taxonomy=taxonomy
     )
 
     classifications: dict[int, Classification] = {}

@@ -316,14 +316,11 @@ class GeminiClient:
         segments: list[SegmentDraft],
         most_tables: MostTables,
         taxonomy: Taxonomy,
-        video: str | bytes | types.File | None = None,
-        mime_type: str = "video/mp4",
     ) -> tuple[list[ClassificationDraft], str]:
         """Stage 5. Structured output only -- schema enumerates data_card and
         muda_ref; param_values are cross-checked against the fixed index
         tables again downstream (Classification.validate_against_tables)
-        before any TMU math runs. If video is provided (Accurate Mode), includes
-        the video payload for multi-modal visual inspection."""
+        before any TMU math runs."""
         segment_listing = "\n".join(
             f"{i}: [{s.t_start_sec:.2f}s - {s.t_end_sec:.2f}s] {s.description}"
             for i, s in enumerate(segments)
@@ -332,9 +329,6 @@ class GeminiClient:
             _classification_prompt(most_tables, taxonomy),
             f"\nSegments:\n{segment_listing}",
         ]
-        if video is not None:
-            contents.insert(0, self._video_part(video, mime_type))
-
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=ClassificationResponse,
