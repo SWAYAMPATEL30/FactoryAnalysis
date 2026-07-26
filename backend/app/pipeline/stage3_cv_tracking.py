@@ -133,20 +133,22 @@ class CVTracker:
         duration = frame_count / fps
         step = 1.0 / self.sample_fps
 
-        t = 0.0
-        while t < duration:
-            cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
-            ok, frame = cap.read()
-            if not ok:
-                break
-            # Downscale high-resolution frames to 640px for fast CV inference
-            h, w = frame.shape[:2]
-            if w > 640:
-                target_h = max(2, int(h * (640.0 / w)))
-                frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_NEAREST)
-            yield t, frame
-            t += step
-        cap.release()
+        try:
+            t = 0.0
+            while t < duration:
+                cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000)
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                # Downscale high-resolution frames to 640px for fast CV inference
+                h, w = frame.shape[:2]
+                if w > 640:
+                    target_h = max(2, int(h * (640.0 / w)))
+                    frame = cv2.resize(frame, (640, target_h), interpolation=cv2.INTER_NEAREST)
+                yield t, frame
+                t += step
+        finally:
+            cap.release()
 
     def _detect_hands(self, frame_rgb: np.ndarray) -> dict[str, tuple[float, float]]:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)

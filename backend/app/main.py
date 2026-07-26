@@ -9,6 +9,7 @@ import re
 import shutil
 import time
 import uuid
+import json
 from pathlib import Path
 from typing import Dict, Any
 
@@ -26,12 +27,18 @@ from app.pipeline.stage4_segmentation import segment_video
 from app.pipeline.stage5_classification import classify_segments
 from app.pipeline.stage6_tmu_engine import build_most_row
 from app.services.gemini_client import GeminiClient
+from app.services.storage_cleanup import enforce_storage_limits, verify_disk_space
 
 app = FastAPI(
     title="MOST Factory Video Analysis API",
     description="Automated time-and-motion study API using computer vision and Gemini VLM.",
     version="1.0.0",
 )
+
+@app.on_event("startup")
+def startup_event():
+    print("Application starting up, scanning /app/data/uploads...")
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
 
 app.add_middleware(
     CORSMiddleware,
@@ -151,18 +158,22 @@ class ReviewSubmission(BaseModel):
 def _create_job(
     background_tasks: BackgroundTasks,
     job_id: str,
+    analysis_dir: Path,
     raw_video_path: Path,
     activity_description: str,
     station_no: str,
     activity_no: str,
 ) -> str:
-    output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
+    output_excel_path = analysis_dir / "report.xlsx"
+    output_json_path = analysis_dir / "report.json"
 
     JOBS[job_id] = {
         "status": "QUEUED",
         "phase": "QUEUED",
+        "analysis_dir": analysis_dir,
         "raw_video_path": raw_video_path,
         "output_excel_path": output_excel_path,
+        "output_json_path": output_json_path,
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
@@ -172,8 +183,10 @@ def _create_job(
     background_tasks.add_task(
         _process_video_job,
         job_id,
+        analysis_dir,
         raw_video_path,
         output_excel_path,
+        output_json_path,
         activity_description,
         station_no,
         activity_no,
@@ -183,8 +196,10 @@ def _create_job(
 
 def _process_video_job(
     job_id: str,
+    analysis_dir: Path,
     raw_video_path: Path,
     output_excel_path: Path,
+    output_json_path: Path,
     activity_desc: str,
     station_no: str = "",
     activity_no: str = "",
@@ -197,8 +212,15 @@ def _process_video_job(
         # 1. Mandatory face blur pass
         JOBS[job_id]["phase"] = "PREPROCESSING"
         _save_jobs_to_disk()
-        blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
+        blurred_path = analysis_dir / "blurred.mp4"
         blur_faces(raw_video_path, blurred_path)
+        
+        # Free up 50% storage space immediately since we only need blurred_path now
+        try:
+            raw_video_path.unlink(missing_ok=True)
+            print(f"Cleanup: Deleted temporary original.mp4 to save space.")
+        except Exception as e:
+            print(f"Warning: Failed to delete raw video after processing: {e}")
 
         # 2. Stage 3: CV tracking — produces objective hand-state timing events
         JOBS[job_id]["phase"] = "PREPROCESSING"
@@ -217,7 +239,7 @@ def _process_video_job(
         # 4. VLM Segmentation
         JOBS[job_id]["phase"] = "SEGMENTING"
         _save_jobs_to_disk()
-        segments = segment_video(client, uploaded_video, str(raw_video_path), motion_events=motion_events)
+        segments = segment_video(client, uploaded_video, str(blurred_path.name), motion_events=motion_events)
 
         # 4. Structured Classification
         JOBS[job_id]["phase"] = "CLASSIFYING"
@@ -238,8 +260,12 @@ def _process_video_job(
                     r.activity_no = activity_no
                 rows.append(r)
 
-        # 6. Write Excel
+        # 6. Write Excel and JSON Report
         write_most_analysis_workbook(rows, TEMPLATE_PATH, output_excel_path, activity_desc)
+        
+        import json
+        with open(output_json_path, "w") as f:
+            json.dump([r.model_dump() for r in rows], f, indent=2)
 
         # Store results
         engine = HumanReviewEngine(rows, segments, review_flags)
@@ -257,11 +283,45 @@ def _process_video_job(
         JOBS[job_id]["phase"] = "FAILED"
         JOBS[job_id]["error"] = str(e)
         _save_jobs_to_disk()
+    finally:
+        print(f"Starting post-processing cleanup for job {job_id}...")
+        try:
+            if raw_video_path.exists():
+                raw_video_path.unlink(missing_ok=True)
+                print(f"Deleted original.mp4")
+            
+            blurred_path = analysis_dir / "blurred.mp4"
+            if blurred_path.exists():
+                blurred_path.unlink(missing_ok=True)
+                print(f"Deleted blurred.mp4")
+
+            # Remove all other temporary files, keeping only report.xlsx and report.json
+            keep_files = {"report.xlsx", "report.json"}
+            if analysis_dir.exists():
+                for file_path in analysis_dir.iterdir():
+                    if file_path.is_file() and file_path.name not in keep_files:
+                        try:
+                            file_path.unlink(missing_ok=True)
+                            print(f"Deleted temporary file {file_path.name}")
+                        except Exception as e:
+                            print(f"Warning: Failed to delete {file_path.name}: {e}")
+                    elif file_path.is_dir():
+                        try:
+                            shutil.rmtree(file_path, ignore_errors=True)
+                            print(f"Deleted temporary directory {file_path.name}")
+                        except Exception as e:
+                            print(f"Warning: Failed to delete dir {file_path.name}: {e}")
+                            
+            print("Post-processing cleanup completed.")
+            enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+        except Exception as e:
+            print(f"Warning: Post-processing cleanup failed: {e}")
 
 
 
 @app.post("/api/v1/analyze", response_model=JobStatusResponse)
 async def analyze_video(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     activity_description: str = "ASSY WITH PRESS OPERATION",
@@ -270,18 +330,30 @@ async def analyze_video(
 ):
     """Upload a factory floor video clip to launch automated MOST study analysis."""
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
 
+    # CLEANUP BEFORE UPLOAD TO PREVENT Errno 28 No space left on device
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    
+    # VERIFY DISK SPACE
+    required_bytes = int(request.headers.get("content-length", 0)) + 50_000_000  # 50MB buffer
+    if not verify_disk_space(UPLOAD_DIR, required_bytes):
+        raise HTTPException(status_code=507, detail="Insufficient disk space on server. Please try again later.")
+
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
+
+    # Streaming write to avoid reading huge videos into RAM
     with open(raw_video_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+        shutil.copyfileobj(file.file, f)
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no)
+    _create_job(background_tasks, job_id, analysis_dir, raw_video_path, activity_description, station_no, activity_no)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 
 @app.post("/api/v1/analyze/sample", response_model=JobStatusResponse)
 async def analyze_sample_video(
+    request: Request,
     background_tasks: BackgroundTasks,
     activity_description: str = "ASSY WITH PRESS OPERATION",
     station_no: str = "",
@@ -296,10 +368,18 @@ async def analyze_sample_video(
         raise HTTPException(status_code=404, detail="Sample video not available on this server")
 
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_sample.mp4"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
+    
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    required_bytes = sample_path.stat().st_size + 50_000_000
+    if not verify_disk_space(UPLOAD_DIR, required_bytes):
+        raise HTTPException(status_code=507, detail="Insufficient disk space on server. Please try again later.")
+        
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
     shutil.copy(sample_path, raw_video_path)
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no)
+    _create_job(background_tasks, job_id, analysis_dir, raw_video_path, activity_description, station_no, activity_no)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 
@@ -315,11 +395,17 @@ async def analyze_demo_video(
         sample_path = ROOT_DIR / "data" / "samples" / "assy_with_press_operation.mp4"
 
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_demo.mp4"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
+    
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
     if sample_path.exists():
         shutil.copy(sample_path, raw_video_path)
 
-    output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
+    output_excel_path = analysis_dir / "report.xlsx"
+    output_json_path = analysis_dir / "report.json"
 
     # Pre-packaged motion sequence for demo video
     motion_defs = [
@@ -384,8 +470,10 @@ async def analyze_demo_video(
         "phase": "COMPLETED",
         "started_at": time.monotonic() - 30.0,
         "completed_at": time.monotonic(),
+        "analysis_dir": analysis_dir,
         "raw_video_path": raw_video_path,
         "output_excel_path": output_excel_path,
+        "output_json_path": output_json_path,
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
@@ -395,6 +483,11 @@ async def analyze_demo_video(
         "review_engine": engine,
         "excel_path": output_excel_path,
     }
+    
+    # Dump JSON for demo
+    import json
+    with open(output_json_path, "w") as f:
+        json.dump([r.model_dump() for r in rows], f, indent=2)
     _save_jobs_to_disk()
 
     return JobStatusResponse(
@@ -495,9 +588,16 @@ async def get_job_video(job_id: str, request: Request):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    video_path: Path = job.get("raw_video_path")
-    if not video_path or not video_path.exists():
-        raise HTTPException(status_code=404, detail="Video file missing")
+    analysis_dir: Path = job.get("analysis_dir")
+    if not analysis_dir or not analysis_dir.exists():
+        raise HTTPException(status_code=404, detail="Analysis directory missing")
+
+    # The UI plays the blurred video. Original may have been deleted to save space.
+    video_path = analysis_dir / "blurred.mp4"
+    if not video_path.exists():
+        video_path = analysis_dir / "original.mp4"
+        if not video_path.exists():
+            raise HTTPException(status_code=404, detail="Video file missing")
 
     range_header = request.headers.get("range")
     return _ranged_file_response(video_path, range_header, "video/mp4")

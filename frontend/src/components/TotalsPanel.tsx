@@ -32,7 +32,7 @@ export function TotalsPanel({ rows }: { rows: MostRow[] }) {
         return (
           <div key={key} className="rounded-md border border-line bg-raised p-3.5">
             <div className="mb-2.5 font-mono text-[10.5px] uppercase tracking-wide text-ink-faint">{key}</div>
-            <div className="mb-2 h-[5px] overflow-hidden rounded-full bg-raised-2">
+            <div className="mb-2 h-1.25 overflow-hidden rounded-full bg-raised-2">
               <div
                 className="h-full rounded-full transition-[width] duration-500"
                 style={{ width: `${pct}%`, background: COLOR[key] }}

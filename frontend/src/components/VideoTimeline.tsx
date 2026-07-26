@@ -43,7 +43,7 @@ export function VideoTimeline({ videoSrc, videoRef, rows, activeIndex, currentTi
 
       <div className="px-4 py-3.5">
         <div
-          className="relative h-[34px] cursor-pointer overflow-hidden rounded-sm border border-line bg-raised-2"
+          className="relative h-8.5 cursor-pointer overflow-hidden rounded-[4px] border border-line bg-raised-2"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pct = (e.clientX - rect.left) / rect.width;
@@ -67,7 +67,7 @@ export function VideoTimeline({ videoSrc, videoRef, rows, activeIndex, currentTi
           })}
           {total > 0 && (
             <div
-              className="pointer-events-none absolute -top-[3px] -bottom-[3px] z-10 w-0.5 bg-ink transition-[left] duration-150"
+              className="pointer-events-none absolute -top-0.75 -bottom-0.75 z-10 w-0.5 bg-ink transition-[left] duration-150"
               style={{ left: `${(currentTime / total) * 100}%` }}
             >
               <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-ink" />
