@@ -14,6 +14,7 @@ FROM python:3.11-slim
 # System dependencies required by OpenCV (headless) and MediaPipe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    curl \
     libgl1 \
     libglib2.0-0 \
     libgomp1 \
@@ -38,14 +39,19 @@ COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
+# ── Download YOLO-World weights at BUILD time (338MB) ─────────────────────────
+# Using curl directly in the Dockerfile (not a Python script) so Docker creates
+# a fresh uncached layer and the file is guaranteed on disk before the container
+# starts. ultralytics looks for "yolov8s-world.pt" relative to CWD (/app).
+RUN curl -L -o /app/yolov8s-world.pt \
+    "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s-world.pt" \
+    && echo "YOLO-World weights downloaded: $(du -sh /app/yolov8s-world.pt | cut -f1)"
+
+# ── Pre-download MediaPipe models at BUILD time ────────────────────────────────
+RUN python scripts/download_models.py
+
 # Railway injects $PORT at runtime. Default to 8000 for local docker run.
 ENV PORT=8000
-
-# Pre-download ALL model files at build time (MediaPipe + YOLO-World 338MB).
-# This bakes weights into the image so the container never fetches them at
-# runtime — preventing the OOM kill that happens when ultralytics downloads
-# 338MB inside a memory-constrained Railway container on first job run.
-RUN python scripts/download_models.py
 
 # Expose port (documentation only; Railway uses $PORT env var)
 EXPOSE $PORT
