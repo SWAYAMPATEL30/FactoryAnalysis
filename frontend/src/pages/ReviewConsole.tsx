@@ -11,6 +11,7 @@ import { CompletionBanner } from "../components/CompletionBanner";
 import { LiveLogPanel } from "../components/LiveLogPanel";
 import { EfficiencyGauge } from "../components/EfficiencyGauge";
 import { VaNvaDonut } from "../components/VaNvaDonut";
+import { MostTable } from "../components/MostTable";
 import { useJobStream } from "../hooks/useJobStream";
 import { useToast } from "../components/ToastProvider";
 import type { TaxonomyBucket } from "../api/types";
@@ -189,6 +190,16 @@ export function ReviewConsole() {
             autoFollow={isPlaying}
           />
         </div>
+
+        {rows.length > 0 && (
+          <div className="mb-8">
+            <MostTable
+              rows={rows}
+              activeIndex={activeIndex}
+              onSelect={(i) => seek(rows[i].t_start_sec)}
+            />
+          </div>
+        )}
 
         {isDone && flagsQuery.data && <ReviewFlagPanel jobId={jobId} flags={flagsQuery.data} />}
       </div>
