@@ -2,10 +2,13 @@
 
 This script is called from the Dockerfile RUN step. Running it at build time means:
   - MediaPipe hand/pose weights are on disk before the container starts.
-  - YOLO-World (yolov8s-world.pt) is pre-warmed and its internal cache is populated.
-Both prevent runtime OOM kills from large model downloads inside a memory-constrained container.
+  - yolov8s-world.pt (338MB) is downloaded directly to /app so ultralytics finds it
+    by relative path at runtime without any network call.
+Both prevent runtime OOM kills on Railway's memory-constrained containers.
 """
 import sys
+import urllib.request
+from pathlib import Path
 
 # ── 1. MediaPipe models ────────────────────────────────────────────────────────
 try:
@@ -15,28 +18,21 @@ try:
 except Exception as e:
     print(f"⚠️  MediaPipe model download skipped: {e}")
 
-# ── 2. YOLO-World weights pre-warm ────────────────────────────────────────────
-# Importing YOLO and loading the weights here causes ultralytics to cache the
-# model internals so the first real inference in the container is instant.
-try:
-    # Ensure the open_clip alias is available if openai-clip is not installed
+# ── 2. YOLO-World weights — explicit direct download ──────────────────────────
+# Do NOT rely on ultralytics auto-download at runtime (it spikes 338MB RAM
+# inside the container and causes OOM kills). Instead download the .pt file
+# directly via urllib at Docker build time, exactly like MediaPipe above.
+YOLO_DEST = Path("/app/yolov8s-world.pt")
+YOLO_URL = (
+    "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s-world.pt"
+)
+
+if YOLO_DEST.exists():
+    print(f"✅ YOLO-World weights already present at {YOLO_DEST} ({YOLO_DEST.stat().st_size // 1024 // 1024}MB).")
+else:
+    print(f"⬇️  Downloading YOLO-World weights to {YOLO_DEST} ...")
     try:
-        import clip  # noqa: F401
-    except ImportError:
-        try:
-            import open_clip
-            sys.modules["clip"] = open_clip
-        except ImportError:
-            pass
-
-    from ultralytics import YOLO
-    from app.pipeline.stage3_cv_tracking import OBJECT_DETECTION_MODEL
-    from app.config.cv_vocabulary import load_cv_vocabulary
-
-    model = YOLO(OBJECT_DETECTION_MODEL)
-    vocab = load_cv_vocabulary()
-    model.set_classes(vocab.object_queries)
-    print(f"✅ YOLO-World model pre-warmed with {len(vocab.object_queries)} object classes.")
-except Exception as e:
-    print(f"⚠️  YOLO-World pre-warm skipped: {e}")
-
+        urllib.request.urlretrieve(YOLO_URL, YOLO_DEST)
+        print(f"✅ YOLO-World weights downloaded ({YOLO_DEST.stat().st_size // 1024 // 1024}MB).")
+    except Exception as e:
+        print(f"⚠️  YOLO-World download failed: {e}")

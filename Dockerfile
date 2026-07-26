@@ -35,18 +35,17 @@ COPY data/ ../data/
 # Copy built React app into frontend/dist/ where main.py expects it
 COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 
-# YOLO weights — copied into /app so ultralytics finds them relative to CWD
-COPY backend/yolov8s-world.pt ./yolov8s-world.pt
-
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
 # Railway injects $PORT at runtime. Default to 8000 for local docker run.
 ENV PORT=8000
 
-# Pre-download MediaPipe model files at build time using a script
-# (avoids multi-line python -c strings that confuse the Dockerfile parser)
-RUN python scripts/download_models.py || true
+# Pre-download ALL model files at build time (MediaPipe + YOLO-World 338MB).
+# This bakes weights into the image so the container never fetches them at
+# runtime — preventing the OOM kill that happens when ultralytics downloads
+# 338MB inside a memory-constrained Railway container on first job run.
+RUN python scripts/download_models.py
 
 # Expose port (documentation only; Railway uses $PORT env var)
 EXPOSE $PORT
