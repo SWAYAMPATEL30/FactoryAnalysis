@@ -38,6 +38,11 @@ export function useJobStream(jobId: string | undefined, isTerminal: boolean) {
           return [...prev, data];
         });
 
+        // If job completed or failed, close SSE from client side gracefully
+        if (data.stage === "COMPLETED" || data.status === "error") {
+          es.close();
+        }
+
         // Whenever we get an SSE event, we also eagerly update the react-query status cache
         // to match the latest phase, so the rest of the UI stays in sync without polling.
         queryClient.setQueryData(["status", jobId], (old: any) => {
