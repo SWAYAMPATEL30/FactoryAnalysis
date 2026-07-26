@@ -290,13 +290,8 @@ def _process_video_job(
                 raw_video_path.unlink(missing_ok=True)
                 print(f"Deleted original.mp4")
             
-            blurred_path = analysis_dir / "blurred.mp4"
-            if blurred_path.exists():
-                blurred_path.unlink(missing_ok=True)
-                print(f"Deleted blurred.mp4")
-
-            # Remove all other temporary files, keeping only report.xlsx and report.json
-            keep_files = {"report.xlsx", "report.json"}
+            # We MUST KEEP blurred.mp4 so the React frontend can stream the video!
+            keep_files = {"report.xlsx", "report.json", "blurred.mp4"}
             if analysis_dir.exists():
                 for file_path in analysis_dir.iterdir():
                     if file_path.is_file() and file_path.name not in keep_files:
