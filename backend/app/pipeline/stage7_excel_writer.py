@@ -29,13 +29,9 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from datetime import datetime
 
 from openpyxl import load_workbook
 from openpyxl.formula.translate import Translator
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
-from openpyxl.formatting.rule import FormulaRule, CellIsRule
-from openpyxl.chart import PieChart, BarChart, Reference
 
 from app.config.most_tables import load_most_tables
 from app.models.schemas import MostRow
@@ -76,6 +72,9 @@ def _write_trace_headers(ws) -> None:
 def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     """Creates a dedicated 'Activity Timeline Chart' worksheet with a visual Gantt chart
     displaying the chronological distribution, durations, and category breakdowns of all activities."""
+    from openpyxl.chart import BarChart, Reference
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
     chart_sheet_name = "Activity Timeline Chart"
     if chart_sheet_name in wb.sheetnames:
         del wb[chart_sheet_name]
@@ -182,151 +181,6 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     ws_chart.column_dimensions["G"].width = 18
 
 
-def _format_most_analysis_sheet(ws, num_rows: int) -> None:
-    """Applies auto widths, word wrap, borders, and conditional formatting to MOST Analysis sheet."""
-    thin_border = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
-    
-    # Set fixed column widths
-    narrow_cols = ["A", "B", "C", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "R", "U", "V", "X", "AI", "AJ"]
-    for col in narrow_cols:
-        ws.column_dimensions[col].width = 8
-        
-    wide_cols = ["D", "T", "AK", "AM", "AN"]
-    for col in wide_cols:
-        ws.column_dimensions[col].width = 40
-        
-    ws.column_dimensions["Q"].width = 20
-    ws.column_dimensions["AD"].width = 30 # Source video
-    
-    # Time/TMU columns
-    for col in ["S", "W", "Y", "Z", "AA", "AB", "AE", "AF", "AL"]:
-        ws.column_dimensions[col].width = 12
-
-    # Freeze panes
-    ws.freeze_panes = "A6"
-    
-    # Format headers (Row 5)
-    for c in range(1, MAX_CLEAR_COL + 1):
-        cell = ws.cell(row=5, column=c)
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = thin_border
-        
-    if num_rows == 0:
-        return
-
-    # Format data cells
-    for r in range(FIRST_DATA_ROW, FIRST_DATA_ROW + num_rows):
-        for c in range(1, MAX_CLEAR_COL + 1):
-            cell = ws.cell(row=r, column=c)
-            cell.border = thin_border
-            
-            # Alignments & wraps
-            col_letter = ws.cell(row=r, column=c).column_letter
-            if col_letter in wide_cols:
-                cell.alignment = Alignment(wrap_text=True, vertical="top")
-            elif col_letter in narrow_cols or col_letter in ["S", "W", "Y", "Z", "AA", "AB", "AE", "AF", "AL"]:
-                cell.alignment = Alignment(horizontal="right", vertical="top")
-            else:
-                cell.alignment = Alignment(vertical="top")
-                
-            # Number formatting
-            if col_letter in ["S"]: # TMU
-                cell.number_format = "0"
-            elif col_letter in ["W", "Y", "Z", "AA", "AB", "AE", "AF", "AL"]: # Seconds
-                cell.number_format = "0.00\"s\""
-            elif col_letter == "AI": # Confidence
-                cell.number_format = "0%"
-                
-        ws.row_dimensions[r].height = 30 # Minimum height to fit wrapped text
-                
-    # Conditional Formatting for Categories
-    # Columns Y, Z, AA, AB hold the times if it matches the category. We color the row based on AC (Classification Text)
-    last_row = FIRST_DATA_ROW + num_rows - 1
-    data_range = f"A{FIRST_DATA_ROW}:AN{last_row}"
-    
-    va_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
-    sva_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
-    nva_fill = PatternFill(start_color="FCE4D6", end_color="FCE4D6", fill_type="solid")
-    nvan_fill = PatternFill(start_color="E4DFEC", end_color="E4DFEC", fill_type="solid")
-    
-    ws.conditional_formatting.add(data_range, FormulaRule(formula=[f'$AC{FIRST_DATA_ROW}="VA"'], stopIfTrue=True, fill=va_fill))
-    ws.conditional_formatting.add(data_range, FormulaRule(formula=[f'$AC{FIRST_DATA_ROW}="SVA"'], stopIfTrue=True, fill=sva_fill))
-    ws.conditional_formatting.add(data_range, FormulaRule(formula=[f'$AC{FIRST_DATA_ROW}="NVA"'], stopIfTrue=True, fill=nva_fill))
-    ws.conditional_formatting.add(data_range, FormulaRule(formula=[f'$AC{FIRST_DATA_ROW}="NVA-N"'], stopIfTrue=True, fill=nvan_fill))
-    
-    # Highlight low confidence in orange
-    conf_fill = PatternFill(start_color="FFC000", end_color="FFC000", fill_type="solid")
-    ws.conditional_formatting.add(f"AI{FIRST_DATA_ROW}:AI{last_row}", CellIsRule(operator="lessThan", formula=["0.85"], stopIfTrue=True, fill=conf_fill))
-
-
-def _add_summary_pie_chart(wb) -> None:
-    """Adds a pie chart to the 'VA SVA NVA Summary' sheet."""
-    ws = wb["VA SVA NVA Summary"]
-    chart = PieChart()
-    chart.title = "Time Distribution"
-    labels = Reference(ws, min_col=2, min_row=2, max_row=5)
-    data = Reference(ws, min_col=5, min_row=1, max_row=5) # Col E has Total TMU
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(labels)
-    chart.width = 15
-    chart.height = 10
-    ws.add_chart(chart, "H2")
-
-
-def _create_executive_summary_sheet(wb, rows: list[MostRow], activity_desc: str) -> None:
-    ws = wb.create_sheet(title="Executive Summary", index=0)
-    ws.views.sheetView[0].showGridLines = False
-    
-    # Title
-    ws["A1"] = "MOST Analysis: Executive Summary"
-    ws["A1"].font = Font(size=24, bold=True, color="1F4E79")
-    ws.merge_cells("A1:E1")
-    
-    ws["A3"] = "Activity:"
-    ws["B3"] = activity_desc
-    ws["B3"].font = Font(bold=True)
-    
-    ws["A4"] = "Date:"
-    ws["B4"] = datetime.now().strftime("%Y-%m-%d")
-    
-    ws["A5"] = "Operator:"
-    ws["B5"] = rows[0].operator if rows else 1
-    
-    ws["A6"] = "Total Motions:"
-    ws["B6"] = len(rows)
-    
-    total_sec = sum(r.total_time_sec for r in rows) if rows else 0
-    va_sec = sum(r.va_sec for r in rows) if rows else 0
-    eff = (va_sec / total_sec * 100) if total_sec > 0 else 0
-    
-    ws["A7"] = "Total Duration (s):"
-    ws["B7"] = f"{total_sec:.2f}s"
-    
-    ws["A8"] = "Efficiency (VA %):"
-    ws["B8"] = f"{eff:.1f}%"
-    ws["B8"].font = Font(bold=True, color="1A9A52" if eff > 50 else "C8452C")
-    
-    for r in range(3, 9):
-        ws[f"A{r}"].font = Font(color="57636B")
-    
-    ws.column_dimensions["A"].width = 25
-    ws.column_dimensions["B"].width = 40
-    
-    # Pull in the pie chart from summary sheet
-    chart = PieChart()
-    chart.title = "Value Distribution"
-    summary_ws = wb["VA SVA NVA Summary"]
-    labels = Reference(summary_ws, min_col=2, min_row=2, max_row=5)
-    data = Reference(summary_ws, min_col=5, min_row=1, max_row=5)
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(labels)
-    chart.width = 15
-    chart.height = 10
-    ws.add_chart(chart, "D3")
-
-
 def write_most_analysis_workbook(
     rows: list[MostRow],
     template_path: Path,
@@ -399,21 +253,8 @@ def write_most_analysis_workbook(
     ws["D6"] = activity_description
     ws["W4"] = f"=SUM(W{FIRST_DATA_ROW}:W{last_row})"
 
-    # Apply formatting to MOST Analysis sheet
-    _format_most_analysis_sheet(ws, len(rows))
-
-    # Add pie chart to Summary sheet
-    if "VA SVA NVA Summary" in wb.sheetnames:
-        _add_summary_pie_chart(wb)
-
     # Generate dedicated Activity Timeline Chart worksheet tab
     _create_timeline_chart_sheet(wb, rows)
-    
-    # Generate Executive Summary tab
-    _create_executive_summary_sheet(wb, rows, activity_description)
-
-    # Ensure MOST Analysis is active sheet (it will be index 1 after Executive Summary)
-    wb.active = 1
 
     wb.save(output_path)
     return output_path
