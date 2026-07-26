@@ -215,12 +215,7 @@ def _process_video_job(
         blurred_path = analysis_dir / "blurred.mp4"
         blur_faces(raw_video_path, blurred_path)
         
-        # Free up 50% storage space immediately since we only need blurred_path now
-        try:
-            raw_video_path.unlink(missing_ok=True)
-            print(f"Cleanup: Deleted temporary original.mp4 to save space.")
-        except Exception as e:
-            print(f"Warning: Failed to delete raw video after processing: {e}")
+
 
         # 2. Stage 3: CV tracking — produces objective hand-state timing events
         JOBS[job_id]["phase"] = "PREPROCESSING"
