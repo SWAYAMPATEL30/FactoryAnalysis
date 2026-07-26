@@ -146,9 +146,11 @@ class CVTracker:
 
         from ultralytics import YOLO
 
+        # Fallback to YOLOv8 Nano (6.2MB) to fit inside Railway's 500MB free tier.
+        # YOLO-World + CLIP requires ~600MB RAM and mathematically cannot run here.
+        # Standard YOLOv8 detects 80 COCO classes (person, truck, cup, etc).
+        OBJECT_DETECTION_MODEL = "yolov8n.pt"
         self._object_detector = YOLO(OBJECT_DETECTION_MODEL)
-        self._object_queries = load_cv_vocabulary().object_queries
-        self._object_detector.set_classes(self._object_queries)
 
     def _sample_frames(self, video_path: Path):
         cap = cv2.VideoCapture(str(video_path))

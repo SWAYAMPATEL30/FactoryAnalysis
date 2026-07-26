@@ -58,7 +58,7 @@ ENV NUMEXPR_NUM_THREADS=1
 RUN mkdir -p ../data/uploads
 
 # ── Cache-bust: increment to force a full re-download on every build ───────────
-ARG CACHEBUST=7
+ARG CACHEBUST=8
 
 # ── Pre-download ALL model weights at build time ───────────────────────────────
 # download_models.py downloads YOLO-World (338MB) + MediaPipe models and bakes
