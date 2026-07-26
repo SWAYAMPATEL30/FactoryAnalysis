@@ -66,8 +66,8 @@ def verify_disk_space(upload_dir: Path, required_bytes: int) -> bool:
         total, used, free = shutil.disk_usage(str(upload_dir))
         logger.info(f"Free disk space before upload: {free / (1024**3):.2f} GB")
         print(f"Free disk space before upload: {free / (1024**3):.2f} GB")
-        # Enforce a strict minimum of the requested bytes + 1 GB safety buffer
-        safety_buffer = 1024 * 1024 * 1024 # 1 GB
+        # Enforce a strict minimum of the requested bytes + 250 MB safety buffer
+        safety_buffer = 250 * 1024 * 1024 # 250 MB
         return free >= (required_bytes + safety_buffer)
     except Exception as e:
         logger.warning(f"Failed to check disk space: {e}")
