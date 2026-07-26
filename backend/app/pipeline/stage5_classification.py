@@ -10,6 +10,8 @@ it comes back as a ReviewFlag for the mandatory Stage 8 human review gate.
 """
 from __future__ import annotations
 
+from google.genai import types
+
 from app.config.most_tables import load_most_tables
 from app.config.taxonomy import load_taxonomy
 from app.models.schemas import Classification, ReviewFlag, Segment
