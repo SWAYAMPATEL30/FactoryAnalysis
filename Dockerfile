@@ -41,30 +41,12 @@ COPY --from=frontend-build /build/frontend/dist/ ../frontend/dist/
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
-# ── Cache-bust: increment this value to force a full re-download every build ──
-ARG CACHEBUST=3
+# ── Cache-bust: increment to force a full re-download on every build ───────────
+ARG CACHEBUST=4
 
-# ── Download YOLO-World weights at BUILD time via ultralytics Python API ───────
-# ultralytics knows the correct CDN URL and handles all redirects automatically.
-# We alias open_clip -> clip first so YOLO-World initialises without openai-clip.
-RUN python -c "\
-import sys; \
-try: \
-    import clip; \
-except ImportError: \
-    try: \
-        import open_clip; \
-        sys.modules['clip'] = open_clip; \
-    except Exception: \
-        pass; \
-from ultralytics import YOLO; \
-model = YOLO('yolov8s-world.pt'); \
-import os; \
-size = os.path.getsize('yolov8s-world.pt') // (1024*1024); \
-print(f'YOLO-World weights ready: {size}MB at yolov8s-world.pt'); \
-"
-
-# ── Pre-download MediaPipe models at BUILD time ────────────────────────────────
+# ── Pre-download ALL model weights at build time ───────────────────────────────
+# download_models.py downloads YOLO-World (338MB) + MediaPipe models and bakes
+# them into the image so the container never fetches anything at runtime.
 RUN python scripts/download_models.py
 
 # Railway injects $PORT at runtime. Default to 8000 for local docker run.
