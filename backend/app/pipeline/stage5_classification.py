@@ -23,13 +23,13 @@ CONFIDENCE_THRESHOLD = 0.55
 
 
 def classify_segments(
-    client: GeminiClient, segments: list[Segment]
+    client: GeminiClient,
+    segments: list[Segment],
+    video: str | bytes | types.File | None = None,
 ) -> tuple[dict[int, Classification], list[ReviewFlag]]:
     """Returns (segment_id -> Classification for segments that passed
     validation, review flags for everything that didn't or was low
-    confidence). A segment_id missing from the first dict always has a
-    corresponding flag in the second -- callers must not assume a row exists
-    for every input segment."""
+    confidence). If video is provided, uses video payload for Accurate Mode visual inspection."""
     most_tables = load_most_tables()
     taxonomy = load_taxonomy()
 
@@ -38,7 +38,10 @@ def classify_segments(
         for s in segments
     ]
     drafts, model_version = client.classify_segments(
-        segments=draft_client_segments, most_tables=most_tables, taxonomy=taxonomy
+        segments=draft_client_segments,
+        most_tables=most_tables,
+        taxonomy=taxonomy,
+        video=video,
     )
 
     classifications: dict[int, Classification] = {}

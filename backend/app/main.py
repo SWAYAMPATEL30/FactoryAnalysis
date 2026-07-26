@@ -188,7 +188,8 @@ def _process_video_job(
         # Stage 6: Structured Classification
         JOBS[job_id]["phase"] = "CLASSIFYING"
         _emit(job_id, "CLASSIFYING", "running", f"Classifying {len(segments)} segments against MOST data cards…", 0.0)
-        classifications, review_flags = classify_segments(client, segments)
+        video_arg = None if fast_mode else uploaded_video
+        classifications, review_flags = classify_segments(client, segments, video=video_arg)
         _emit(job_id, "CLASSIFYING", "done",
               f"{len(classifications)} classified, {len(review_flags)} flagged for review", 1.0)
 
