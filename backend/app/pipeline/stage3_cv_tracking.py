@@ -144,13 +144,12 @@ class CVTracker:
         import gc
         gc.collect()
 
-        import os
-        if os.environ.get("DISABLE_YOLO") == "1":
-            self._object_detector = None
-        else:
-            from ultralytics import YOLO
-            OBJECT_DETECTION_MODEL = "yolov8n.pt"
-            self._object_detector = YOLO(OBJECT_DETECTION_MODEL)
+        from ultralytics import YOLO
+
+        OBJECT_DETECTION_MODEL = "yolov8s-world.pt"
+        self._object_detector = YOLO(OBJECT_DETECTION_MODEL)
+        self._object_queries = load_cv_vocabulary().object_queries
+        self._object_detector.set_classes(self._object_queries)
 
     def _sample_frames(self, video_path: Path):
         cap = cv2.VideoCapture(str(video_path))

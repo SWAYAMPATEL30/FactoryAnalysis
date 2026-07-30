@@ -57,12 +57,8 @@ ENV NUMEXPR_NUM_THREADS=1
 # Create uploads directory
 RUN mkdir -p ../data/uploads
 
-# Force PyTorch/YOLO to be skipped entirely to fit in 500MB RAM.
-# MediaPipe Hand Tracking and Frame Motion Diffing will still function perfectly.
-ENV DISABLE_YOLO=1
-
 # ── Cache-bust: increment to force a full re-download on every build ───────────
-ARG CACHEBUST=9
+ARG CACHEBUST=10
 
 # ── Pre-download ALL model weights at build time ───────────────────────────────
 # download_models.py downloads YOLO-World (338MB) + MediaPipe models and bakes
