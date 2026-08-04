@@ -225,7 +225,7 @@ export function UploadPage() {
             <>
               <div className="mb-2 font-display text-xl font-semibold text-ink">Drop a work-cycle video, or click to browse</div>
               <div className="text-sm text-ink-faint">
-                Faces are blurred automatically before anything leaves this screen. Up to 512MB.
+                MP4 or AVI format supported. Up to 512MB.
               </div>
             </>
           )}

@@ -11,19 +11,19 @@ const PIPELINE = [
     detail: "Supported: MP4, MOV, AVI · Max: 512 MB · Recommended: 30–120 seconds",
   },
   {
-    stage: "02 — Face Blur",
-    title: "Mandatory privacy pass",
+    stage: "02 — Preprocessing",
+    title: "Video optimization pass",
     color: "bg-orange-500/20 border-orange-400/30",
     accent: "text-orange-400",
-    desc: "Before any AI model sees a single frame, MediaPipe Face Detection identifies every face in the video. OpenCV replaces each with a blurred region. This is not optional — the blurred copy is what goes into all downstream processing.",
-    detail: "MediaPipe detection runs every 3rd frame · boxes cached between · 1,800 frames processed for a 1-min 30fps video",
+    desc: "Before AI analysis begins, the video is validated, decoded, and optimized for smooth computer vision tracking across all pipeline stages.",
+    detail: "Frame extraction & resolution optimization · 1,800 frames checked for a 1-min 30fps video",
   },
   {
     stage: "03 — CV Tracking",
     title: "Frame-by-frame motion tracking",
     color: "bg-purple-500/20 border-purple-400/30",
     accent: "text-purple-400",
-    desc: "A computer vision stack samples the blurred video at 4 frames per second. YOLO-World detects objects in the worker's workspace. MediaPipe tracks hand landmarks. Machine state (IDLE vs ACTUATING) is detected by pixel-difference analysis.",
+    desc: "A computer vision stack samples the video at 4 frames per second. YOLO-World detects objects in the worker's workspace. MediaPipe tracks hand landmarks. Machine state (IDLE vs ACTUATING) is detected by pixel-difference analysis.",
     detail: "Sample rate: 4fps · 240 frames per 1-min video · YOLO-World (yolov8s-world) + MediaPipe Hands + cv2.absdiff",
   },
   {
@@ -31,7 +31,7 @@ const PIPELINE = [
     title: "Gemini identifies motion boundaries",
     color: "bg-accent/20 border-accent/30",
     accent: "text-accent",
-    desc: "The blurred video — plus the CV tracking events — is sent to Google Vertex AI Gemini Flash. Gemini identifies where one motion element ends and the next begins, producing a time-stamped list of segments each described in plain language.",
+    desc: "The video clip — plus the CV tracking events — is sent to Google Vertex AI Gemini Flash. Gemini identifies where one motion element ends and the next begins, producing a time-stamped list of segments each described in plain language.",
     detail: "Model: Gemini Flash (Vertex AI) · Video tokens: ~258/frame sampled at 1fps · Typical segments: 8–15 per 1-min video",
   },
   {
@@ -117,7 +117,7 @@ export function HowItWorksPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { title: "No unblurred video to AI", desc: "The original video with unblurred faces is never sent to any AI model. Only the blurred copy crosses the network boundary." },
+              { title: "Enterprise Data Privacy", desc: "Vertex AI Enterprise ensures zero model training on customer data and strict data isolation." },
               { title: "No auto-finalized reports", desc: "The human review gate (Stage 7) is mandatory. Low-confidence classifications are always held for engineer approval." },
               { title: "No invented MOST values", desc: "Parameter indices are selected from fixed lookup tables defined in code. The AI cannot invent a parameter value that doesn't exist in the MOST standard." },
             ].map((g) => (

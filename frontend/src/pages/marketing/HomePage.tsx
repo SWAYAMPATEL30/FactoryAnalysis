@@ -4,7 +4,7 @@ import { MarketingNav } from "../../components/layout/MarketingNav";
 
 const STEPS = [
   { num: "01", label: "Upload Video", desc: "Drop a short clip of any work cycle. Supports up to 512 MB." },
-  { num: "02", label: "Privacy Blur", desc: "Faces are automatically blurred before any AI processing — mandatory, not optional." },
+  { num: "02", label: "Video Ingestion", desc: "Video is preprocessed and optimized for high-speed AI computer vision analysis." },
   { num: "03", label: "AI Motion Tracking", desc: "Hand position, held objects, and machine state are tracked frame-by-frame." },
   { num: "04", label: "MOST Report", desc: "Segments are classified to MOST data cards and a TMU report is generated. A human engineer reviews before finalizing." },
 ];
@@ -13,7 +13,7 @@ const STATS = [
   { value: "~5 min", label: "per 1-min video", sub: "vs. 30–60 min manual" },
   { value: "~$0.04", label: "per study", sub: "vs. $150–300 manual" },
   { value: "BasicMOST", label: "methodology", sub: "G, C & T sequence models" },
-  { value: "100%", label: "face privacy", sub: "blurred before any AI call" },
+  { value: "Automated", label: "study workflow", sub: "instant report generation" },
 ];
 
 const fade = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } };
