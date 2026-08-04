@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { TopBar } from "../components/TopBar";
 import { PhaseProgress } from "../components/PhaseProgress";
 import { VideoTimeline } from "../components/VideoTimeline";
 import { ReportFeed } from "../components/ReportFeed";
@@ -21,6 +20,7 @@ const TERMINAL = new Set(["COMPLETED", "FAILED"]);
 
 export function ReviewConsole() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -117,9 +117,14 @@ export function ReviewConsole() {
   }
 
   return (
-    <div className="min-h-screen">
-      <TopBar />
-      <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="px-4 py-6 sm:px-6 sm:py-8 max-w-6xl mx-auto">
+        {/* Breadcrumb */}
+        <div className="mb-4 flex items-center gap-2 text-xs text-ink-faint">
+          <button onClick={() => navigate(-1)} className="hover:text-accent transition-colors min-h-[44px] pr-2">← Back</button>
+          <span>/</span>
+          <span>Report</span>
+          {jobId && <span>· <span className="font-mono">{jobId.slice(0, 8)}…</span></span>}
+        </div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-2xl font-extrabold uppercase text-ink">Review</div>
@@ -132,7 +137,8 @@ export function ReviewConsole() {
           {isDone && (
             <a
               href={excelDownloadUrl(jobId)}
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink no-underline"
+              download={`MOST_Analysis_${jobId.slice(0, 8)}.xlsx`}
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink no-underline min-h-[44px]"
             >
               Download workbook (.xlsx)
             </a>
@@ -157,19 +163,15 @@ export function ReviewConsole() {
             />
             
             {rows.length > 0 && (
-              <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
-                <div className="md:col-span-1">
-                  <EfficiencyGauge vaSec={sums.VA} totalSec={totalSec} />
-                </div>
-                <div className="md:col-span-2">
-                  <VaNvaDonut sums={sums} />
-                </div>
+              <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <EfficiencyGauge vaSec={sums.VA} totalSec={totalSec} />
+                <VaNvaDonut sums={sums} />
               </div>
             )}
           </>
         )}
 
-        <div className="mb-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           <div className="flex flex-col gap-4">
             <VideoTimeline
               videoSrc={videoUrl(jobId)}
@@ -202,7 +204,6 @@ export function ReviewConsole() {
         )}
 
         {isDone && flagsQuery.data && <ReviewFlagPanel jobId={jobId} flags={flagsQuery.data} />}
-      </div>
     </div>
   );
 }

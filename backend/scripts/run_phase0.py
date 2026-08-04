@@ -74,7 +74,7 @@ def run(
     print(f"      {len(segments)} segments found")
 
     print("[5/7] Stage 5: structured classification")
-    classifications, review_flags = classify_segments(client, uploaded_video, segments)
+    classifications, review_flags = classify_segments(client, segments)
     if review_flags:
         print(f"      WARNING: {len(review_flags)} segment(s) need mandatory human review:")
         for flag in review_flags:

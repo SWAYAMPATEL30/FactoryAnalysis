@@ -92,7 +92,7 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
                     {fmtTime(row.t_start_sec)} – {fmtTime(row.t_end_sec)}
                   </td>
                   <td className="px-3.5 py-3 text-right font-mono text-ink font-semibold">
-                    {row.activity_duration_sec.toFixed(1)}s
+                    {row.total_time_sec.toFixed(1)}s
                   </td>
                   <td className="px-3.5 py-3 text-right font-mono text-ink">
                     {row.tmu.toFixed(0)}

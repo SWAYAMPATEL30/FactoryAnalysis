@@ -559,6 +559,7 @@ async def download_excel_report(job_id: str):
         path=excel_path,
         filename=excel_path.name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        content_disposition_type="attachment",
     )
 
 

@@ -6,6 +6,8 @@ import "./index.css";
 import App from "./App.tsx";
 
 import { ToastProvider } from "./components/ToastProvider";
+import { AuthProvider } from "./context/AuthContext.tsx";
+import { WorkstationProvider } from "./context/WorkstationContext.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,9 +22,13 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
+        <AuthProvider>
+          <WorkstationProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </WorkstationProvider>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
