@@ -11,8 +11,9 @@ const BUCKET_STYLE: Record<string, { bg: string; text: string; border: string }>
 
 function fmtTime(s: number): string {
   const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m < 10 ? "0" : ""}${m}:${sec < 10 ? "0" : ""}${sec}`;
+  const sec = (s % 60).toFixed(1);
+  const padSec = parseFloat(sec) < 10 ? `0${sec}` : sec;
+  return `${m < 10 ? "0" : ""}${m}:${padSec}`;
 }
 
 interface Props {
