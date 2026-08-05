@@ -137,32 +137,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUpWithEmail(email: string, pass: string, name: string, companyName: string, role: Role): Promise<{ error?: string }> {
     try {
-      // Save locally to guarantee persistence across browser reloads
+      const normalizedEmail = email.toLowerCase().trim();
       const localUsersRaw = localStorage.getItem(USERS_DB_KEY);
       const registered = localUsersRaw ? JSON.parse(localUsersRaw) : {};
-      registered[email.toLowerCase()] = { pass, name, companyName, role };
-      localStorage.setItem(USERS_DB_KEY, JSON.stringify(registered));
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
+      // Check if email already exists in registered database
+      if (registered[normalizedEmail]) {
+        return { error: "An account with this email address already exists. Please sign in instead." };
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: normalizedEmail,
         password: pass,
         options: {
           data: { name, companyName, role },
         },
       });
 
-      if (error && !data?.user) {
-        // Fallback login with stored credentials
-        loginInternal(companyName, name, role, email);
-        return {};
+      if (error) {
+        if (
+          error.message.toLowerCase().includes("already registered") ||
+          error.message.toLowerCase().includes("already exists") ||
+          (error as any).status === 422
+        ) {
+          return { error: "An account with this email address already exists. Please sign in instead." };
+        }
       }
 
-      loginInternal(companyName, name, role, email);
+      // Save user profile locally for persistence
+      registered[normalizedEmail] = { pass, name, companyName, role };
+      localStorage.setItem(USERS_DB_KEY, JSON.stringify(registered));
+
+      loginInternal(companyName, name, role, normalizedEmail);
       return {};
     } catch (err: any) {
-      // Fallback
-      loginInternal(companyName, name, role, email);
-      return {};
+      return { error: err?.message || "Failed to create account." };
     }
   }
 
