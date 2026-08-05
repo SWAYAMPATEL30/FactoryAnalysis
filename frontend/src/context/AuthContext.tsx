@@ -23,6 +23,42 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = "fa_auth";
 const USERS_DB_KEY = "fa_registered_users";
 
+export function validateEmailFormat(email: string): { valid: boolean; error?: string } {
+  const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const DOMAIN_TYPOS: Record<string, string> = {
+    "gmai.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmaill.com": "gmail.com",
+    "gmal.com": "gmail.com",
+    "yaho.com": "yahoo.com",
+    "yahooo.com": "yahoo.com",
+    "outloo.com": "outlook.com",
+    "hotmial.com": "hotmail.com",
+    "icloud.co": "icloud.com",
+  };
+
+  const clean = email.toLowerCase().trim();
+  if (!clean || !EMAIL_REGEX.test(clean)) {
+    return { valid: false, error: "Please enter a valid email address format (e.g. name@company.com)." };
+  }
+
+  const domain = clean.split("@")[1] || "";
+  if (DOMAIN_TYPOS[domain]) {
+    return {
+      valid: false,
+      error: `Invalid email domain '${domain}'. Did you mean ${clean.replace(domain, DOMAIN_TYPOS[domain])}?`,
+    };
+  }
+
+  const parts = domain.split(".");
+  const tld = parts[parts.length - 1];
+  if (!tld || tld.length < 2 || /^\d+$/.test(tld)) {
+    return { valid: false, error: "Please enter an email with a valid domain extension (e.g. .com, .org, .io)." };
+  }
+
+  return { valid: true };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<AuthState>(() => {
@@ -103,6 +139,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInWithEmail(email: string, pass: string): Promise<{ error?: string }> {
     try {
+      const emailCheck = validateEmailFormat(email);
+      if (!emailCheck.valid) {
+        return { error: emailCheck.error };
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pass,
@@ -137,6 +178,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signUpWithEmail(email: string, pass: string, name: string, companyName: string, role: Role): Promise<{ error?: string }> {
     try {
+      const emailCheck = validateEmailFormat(email);
+      if (!emailCheck.valid) {
+        return { error: emailCheck.error };
+      }
+
       const normalizedEmail = email.toLowerCase().trim();
       const localUsersRaw = localStorage.getItem(USERS_DB_KEY);
       const registered = localUsersRaw ? JSON.parse(localUsersRaw) : {};
@@ -184,7 +230,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
       if (error) {
-        // If Supabase Google provider is not yet enabled in Supabase Dashboard, fallback seamlessly
         if (
           error.message.includes("not enabled") ||
           error.message.includes("validation_failed") ||
