@@ -36,6 +36,12 @@
   --color-accent-ink: #ffffff;
   --color-accent-soft: #dcf1ed;
 
+  /* Industrial marketing palette */
+  --color-navy: #0a1628;
+  --color-navy-mid: #112244;
+  --color-amber: #d4820a;
+  --color-amber-soft: #fef3cd;
+
   --color-va: #1a9a52;
   --color-va-soft: #dcf3e5;
   --color-sva: #b4790a;
@@ -103,18 +109,48 @@
 * {
   box-sizing: border-box;
 }
-html,
+html {
+  height: 100%;
+}
 body,
 #root {
   margin: 0;
   padding: 0;
-  min-height: 100%;
+  height: 100%;
 }
 body {
   background: var(--color-ground);
   color: var(--color-ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+/* Snappy taps — eliminates 300 ms delay on mobile/tablet */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* ── App shell: fixed sidebar + scrollable content ─────────────────────── */
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100%;
+  overflow: hidden;
+}
+.app-sidebar {
+  height: 100%;
+  overflow-y: auto;
+}
+.app-content {
+  height: 100%;
+  overflow: hidden;
+}
+/* On mobile the sidebar column collapses — only the content column shows */
+@media (max-width: 767px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

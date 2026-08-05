@@ -13,8 +13,9 @@ const BUCKET_STYLE: Record<string, { color: string; soft: string }> = {
 
 function fmtTime(s: number): string {
   const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m < 10 ? "0" : ""}${m}:${sec < 10 ? "0" : ""}${sec}`;
+  const sec = (s % 60).toFixed(1);
+  const padSec = parseFloat(sec) < 10 ? `0${sec}` : sec;
+  return `${m < 10 ? "0" : ""}${m}:${padSec}`;
 }
 
 function confidenceColor(confidence: number): string {
@@ -54,7 +55,7 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
   }, [activeIndex, autoFollow]);
 
   return (
-    <div className="flex max-h-[620px] flex-col rounded-md border border-line bg-raised">
+    <div className="flex h-full max-h-[500px] flex-col rounded-md border border-line bg-raised">
       <div className="flex items-center justify-between border-b border-line px-4.5 py-3.5">
         <div className="text-sm font-semibold text-ink">
           Report {generating ? "— generating" : `— ${rows.length} motions`}
@@ -92,8 +93,8 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
                     <span>
                       {fmtTime(row.t_start_sec)}–{fmtTime(row.t_end_sec)}
                     </span>
-                    <span>{row.activity_duration_sec.toFixed(1)}s</span>
-                    <span>{row.tmu.toFixed(0)} TMU</span>
+                    <span>Video: {(row.activity_duration_sec || (row.t_end_sec - row.t_start_sec)).toFixed(1)}s</span>
+                    <span>MOST: {row.tmu.toFixed(0)} TMU ({(row.tmu * 0.036).toFixed(1)}s)</span>
                   </div>
                 </div>
                 <div className="text-right">

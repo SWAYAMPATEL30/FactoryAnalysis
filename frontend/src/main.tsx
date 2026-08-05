@@ -5,6 +5,10 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
 
+import { ToastProvider } from "./components/ToastProvider";
+import { AuthProvider } from "./context/AuthContext.tsx";
+import { WorkstationProvider } from "./context/WorkstationContext.tsx";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -18,7 +22,13 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AuthProvider>
+          <WorkstationProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </WorkstationProvider>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

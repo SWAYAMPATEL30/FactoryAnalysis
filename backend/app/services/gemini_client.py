@@ -94,7 +94,7 @@ EXAMPLES OF RICH MICRO-MOTION DESCRIPTIONS (strictly segmented on every micro-tr
   "An operator laying aside the dispensing tool onto the workstation rack" (human_movement_state: RELEASE, machine_state: IDLE)
 
 For each micro-activity segment, output:
-  - t_start_sec, t_end_sec: exact micro-boundary timestamps in seconds. CRITICAL RULE: DO NOT round timestamps to whole numbers or half seconds (e.g., avoid 1.0, 1.5, 2.0). You MUST provide highly precise decimal timestamps (e.g., 1.3, 2.7, 4.2) that exactly match the physical motion boundaries down to the fraction of a second.
+  - t_start_sec, t_end_sec: exact micro-boundary timestamps in seconds
   - description: rich, detailed natural human language sentence describing the action
   - human_movement_state: state of movement ("MOVE", "GRASP", "HOLD", "RELEASE")
   - machine_state: state of machine ("IDLE", "ACTUATING")
@@ -150,16 +150,13 @@ def _classification_prompt(most_tables: MostTables, taxonomy: Taxonomy) -> str:
     taxonomy_lines = [f"{e.ref}: {e.description} ({e.classification})" for e in taxonomy.entries]
 
     return f"""You are the structured classification step of a MOST time-and-motion study.
-You are given the same video and a list of already-segmented elemental motions
-(index, start/end time, description).
+You are given a list of already-segmented elemental motions
+(index, start/end time, description) describing an operator's actions.
 
-Before classifying, look closely at what each tool/action actually DOES to the part --
-not just what the tool looks like. A pen/syringe-shaped dispenser applying a visible
-substance (glue, sealant, paint) onto the part is GLUING (ref 35) or PAINTING (ref 41),
-not fastening/screwing (ref 42), even if it superficially resembles a powered
-screwdriver. A rotating bit engaging and turning a screw head is fastening (ref 42).
-Check for physical evidence in the frame -- residue, adhesive, or material appearing
-on the part -- rather than assuming from the tool's silhouette alone.
+Before classifying, carefully read what each tool/action actually DOES to the part based on the description.
+A dispenser applying a visible substance (glue, sealant, paint) onto the part is GLUING (ref 35) or PAINTING (ref 41),
+not fastening/screwing (ref 42). A rotating bit engaging and turning a screw head is fastening (ref 42).
+Base your classification entirely on the provided text description.
 
 For EACH segment, in the same order, choose:
 
@@ -281,10 +278,13 @@ class GeminiClient:
                         # Model ID not available in this region/version, try next model candidate
                         break
                     if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
-                        wait_sec = 2.0
+                        wait_sec = 10.0 * (1.5 ** attempt)
+                        match = re.search(r"retry in (\d+(?:\.\d+)?)s", err_str, re.IGNORECASE)
+                        if match:
+                            wait_sec = min(60.0, float(match.group(1)) + 2.0)
                         time.sleep(wait_sec)
                     else:
-                        time.sleep(1.0)
+                        time.sleep(3.0)
         raise last_exc
 
     def segment_video(
@@ -313,11 +313,9 @@ class GeminiClient:
 
     def classify_segments(
         self,
-        video: str | bytes | types.File,
         segments: list[SegmentDraft],
         most_tables: MostTables,
         taxonomy: Taxonomy,
-        mime_type: str = "video/mp4",
     ) -> tuple[list[ClassificationDraft], str]:
         """Stage 5. Structured output only -- schema enumerates data_card and
         muda_ref; param_values are cross-checked against the fixed index

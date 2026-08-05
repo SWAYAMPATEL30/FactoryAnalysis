@@ -1,17 +1,37 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .venv/
 venv/
 *.egg-info/
+.pytest_cache/
+dist/
+build/
+
+# Environment / secrets — never commit these
 .env
+backend/.env
+
+# Uploaded videos and generated Excel outputs
 data/uploads/*
 !data/uploads/.gitkeep
-*.pt
-*.task
-*.mp4
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+weights/
 backend/weights/
-backend/yolov8s-world.pt
-.pytest_cache/
+
+# Node / Frontend
 frontend/node_modules/
 frontend/dist/
-frontend/.vite/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp

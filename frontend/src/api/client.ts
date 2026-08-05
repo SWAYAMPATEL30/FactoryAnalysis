@@ -20,6 +20,7 @@ export interface AnalyzeMeta {
   activityDescription: string;
   stationNo?: string;
   activityNo?: string;
+  fastMode: boolean;
 }
 
 export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobStatusResponse> {
@@ -28,6 +29,8 @@ export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobSt
   form.append("activity_description", meta.activityDescription);
   if (meta.stationNo) form.append("station_no", meta.stationNo);
   if (meta.activityNo) form.append("activity_no", meta.activityNo);
+  // FastAPI handles booleans from forms as strings
+  form.append("fast_mode", meta.fastMode ? "true" : "false");
   const res = await fetch(`${BASE}/analyze`, { method: "POST", body: form });
   return handle<JobStatusResponse>(res);
 }
@@ -36,6 +39,7 @@ export async function analyzeSampleVideo(meta: AnalyzeMeta): Promise<JobStatusRe
   const params = new URLSearchParams({ activity_description: meta.activityDescription });
   if (meta.stationNo) params.set("station_no", meta.stationNo);
   if (meta.activityNo) params.set("activity_no", meta.activityNo);
+  // We keep the signature clean; demo video doesn't actually use CV tracking anyway
   const res = await fetch(`${BASE}/analyze/demo?${params.toString()}`, { method: "POST" });
   return handle<JobStatusResponse>(res);
 }
@@ -61,6 +65,14 @@ export function excelDownloadUrl(jobId: string): string {
 
 export function videoUrl(jobId: string): string {
   return `${BASE}/jobs/${jobId}/video`;
+}
+
+export function streamUrl(jobId: string): string {
+  return `${BASE}/jobs/${jobId}/stream`;
+}
+
+export function previewUrl(jobId: string): string {
+  return `${BASE}/jobs/${jobId}/preview`;
 }
 
 export interface ReviewSubmission {

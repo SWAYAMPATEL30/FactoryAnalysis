@@ -116,6 +116,11 @@ class ReviewFlag(BaseModel):
     segment_id: int
     reason: str
     confidence: float | None = None
+    # Pre-populated from the model's attempted classification (may be None if no
+    # draft was returned at all). Used to pre-fill the human review correction form.
+    attempted_data_card: str | None = None
+    attempted_param_values: list[int] | None = None
+    attempted_muda_ref: int | None = None
 
 
 class MostRow(BaseModel):
