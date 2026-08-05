@@ -78,6 +78,8 @@ export function LoginPage() {
     setLoading(false);
     if (res.error) {
       setError(res.error);
+    } else {
+      navigate("/app/dashboard");
     }
   }
 
