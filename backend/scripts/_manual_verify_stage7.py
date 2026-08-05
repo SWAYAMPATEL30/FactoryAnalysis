@@ -14,9 +14,7 @@ from app.pipeline.stage7_excel_writer import write_most_analysis_workbook
 ROOT = Path(__file__).parent.parent.parent
 GROUND_TRUTH = ROOT / "data" / "ground_truth" / "ASSY_WITH_PRESS_OPERATION_ground_truth.xlsx"
 TEMPLATE = ROOT / "data" / "templates" / "most_analysis_template.xlsx"
-OUT = Path(
-    r"C:\Users\PREMRA~1\AppData\Local\Temp\claude\C--Users-premraval010-Desktop-Factory-Video-Analysis\72ae13bb-373e-43e4-9204-b98d21e5f832\scratchpad\stage7_verify_output.xlsx"
-)
+OUT = ROOT / "data" / "output" / "verify_stage7.xlsx"
 
 wb = openpyxl.load_workbook(GROUND_TRUTH, data_only=True)
 ws = wb["MOST Analysis"]

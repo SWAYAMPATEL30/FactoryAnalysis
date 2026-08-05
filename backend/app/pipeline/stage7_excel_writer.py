@@ -11,19 +11,6 @@ IF()s -- see the note below.
 Sheet 2 ('VA SVA NVA Summary') is left completely untouched: its SUMIF/pivot
 formulas already reference whole columns on Sheet 1, so they keep working
 unmodified as rows are added.
-
-Two latent bugs in the original workbook's Y/Z/AA/AB formulas, found while
-building this (neither is exercised by the example workbook's own 26 rows,
-so they were invisible until now):
-  1. Ref 0 (Noise) satisfies "V<23" and is silently counted as NVA time.
-  2. Ref 23 ("Manual testing", taxonomy classification NVA) satisfies
-     none of Y/Z/AA/AB's range conditions and is silently dropped
-     from every bucket.
-Both stem from bucketing by numeric ref ranges instead of the taxonomy's own
-classification field. Since the taxonomy is required to be versioned/editable
-(refs can move -- ref 48/50 already did in this build), this writer buckets
-new rows via VLOOKUP against the taxonomy's classification column instead,
-which is immune to both bugs and to any future renumbering.
 """
 from __future__ import annotations
 
@@ -32,15 +19,17 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 from openpyxl.formula.translate import Translator
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from app.config.most_tables import load_most_tables
 from app.models.schemas import MostRow
 
 SHEET_NAME = "MOST Analysis"
 FIRST_DATA_ROW = 6
-MAX_CLEAR_COL = 45  # generous headroom above AM (col 39)
+MAX_CLEAR_COL = 45  # headroom above AN (col 40)
 
-# Extra traceability & activity columns, appended after the template's own AC (col 29).
+# Extra traceability & activity columns, appended after template's AC (col 29).
 TRACE_HEADERS = {
     "AD": "Source Video",
     "AE": "Segment Start (s)",
@@ -55,25 +44,113 @@ TRACE_HEADERS = {
     "AN": "Elemental Description",
 }
 
+# Explicit column widths for perfect layout & PDF print export
+COLUMN_WIDTHS = {
+    "A": 8, "B": 20, "C": 12, "D": 26, "E": 12,
+    "F": 5, "G": 5, "H": 5, "I": 5, "J": 5, "K": 5, "L": 5, "M": 5, "N": 5, "O": 5, "P": 5,
+    "Q": 24, "R": 8, "S": 12, "T": 38, "U": 10, "V": 12, "W": 12, "X": 16,
+    "Y": 10, "Z": 10, "AA": 10, "AB": 10, "AC": 22,
+    "AD": 32, "AE": 16, "AF": 16, "AG": 22, "AH": 22, "AI": 13, "AJ": 16, "AK": 38, "AL": 20, "AM": 26, "AN": 45
+}
+
 
 def _clear_existing_data_rows(ws) -> None:
-    from openpyxl.utils import get_column_letter
-
     for r in range(FIRST_DATA_ROW, ws.max_row + 1):
         for c in range(1, MAX_CLEAR_COL + 1):
             ws[f"{get_column_letter(c)}{r}"] = None
 
 
-def _write_trace_headers(ws) -> None:
+def _format_trace_headers(ws) -> None:
+    """Formats top banner (AD1:AN4) and table header row 5 for columns AD through AN
+    matching the professional styling of columns A through AC."""
+    # Top Banner Title for Traceability section (AD4:AN4)
+    ws.merge_cells("AD4:AN4")
+    banner_cell = ws["AD4"]
+    banner_cell.value = "AI Vision Traceability & Segment Telemetry"
+    banner_cell.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    banner_cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    banner_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Header Row 5 formatting for AD through AN
+    header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    header_font = Font(name="Calibri", size=10, bold=True, color="1F4E79")
+    header_border = Border(
+        left=Side(style="thin", color="808080"),
+        right=Side(style="thin", color="808080"),
+        top=Side(style="thin", color="808080"),
+        bottom=Side(style="medium", color="1F4E79"),
+    )
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    ws.row_dimensions[4].height = 24
+    ws.row_dimensions[5].height = 28
+
     for col, header in TRACE_HEADERS.items():
-        ws[f"{col}5"] = header
+        cell = ws[f"{col}5"]
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.border = header_border
+        cell.alignment = header_alignment
+
+
+def _apply_table_formatting(ws, last_row: int) -> None:
+    """Applies clean borders, text wrapping, alignments, and column widths across all data cells A6:AN{last_row}."""
+    thin_border = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+    data_font = Font(name="Calibri", size=10)
+
+    # Center alignment for code/meta columns
+    center_align = Alignment(horizontal="center", vertical="center")
+    # Left alignment with text wrap for descriptions
+    left_wrap_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    # Right alignment for numerical columns
+    right_align = Alignment(horizontal="right", vertical="center")
+
+    left_wrap_cols = {"D", "T", "AD", "AK", "AM", "AN"}
+    right_align_cols = {"A", "B", "C", "R", "S", "W", "AE", "AF", "AI", "AL"}
+
+    for r in range(FIRST_DATA_ROW, last_row + 1):
+        ws.row_dimensions[r].height = 26
+        for col_idx in range(1, 41):  # A to AN (1 to 40)
+            col_letter = get_column_letter(col_idx)
+            cell = ws[f"{col_letter}{r}"]
+            cell.font = data_font
+            cell.border = thin_border
+
+            if col_letter in left_wrap_cols:
+                cell.alignment = left_wrap_align
+            elif col_letter in right_align_cols:
+                cell.alignment = right_align
+            else:
+                cell.alignment = center_align
+
+            # Number formatting
+            if col_letter in ("S", "W"):
+                cell.number_format = "#,##0.00"
+            elif col_letter in ("AE", "AF", "AI", "AL"):
+                cell.number_format = "0.00"
+
+    # Set column widths
+    for col_letter, width in COLUMN_WIDTHS.items():
+        ws.column_dimensions[col_letter].width = width
+
+    # Configure page setup for clean PDF conversion / print export
+    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
 
 
 def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     """Creates a dedicated 'Activity Timeline Chart' worksheet with a visual Gantt chart
     displaying the chronological distribution, durations, and category breakdowns of all activities."""
     from openpyxl.chart import BarChart, Reference
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
     chart_sheet_name = "Activity Timeline Chart"
     if chart_sheet_name in wb.sheetnames:
@@ -141,6 +218,7 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
             c.border = thin_border
             if col in (2, 3, 4):
                 c.alignment = Alignment(horizontal="right")
+                c.number_format = "0.00"
             else:
                 c.alignment = Alignment(horizontal="left")
 
@@ -168,10 +246,8 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     chart.y_axis.title = "Activities"
     chart.legend = None
 
-    # Embed chart beside table
     ws_chart.add_chart(chart, "I3")
 
-    # Column widths
     ws_chart.column_dimensions["A"].width = 38
     ws_chart.column_dimensions["B"].width = 15
     ws_chart.column_dimensions["C"].width = 15
@@ -179,134 +255,6 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     ws_chart.column_dimensions["E"].width = 25
     ws_chart.column_dimensions["F"].width = 18
     ws_chart.column_dimensions["G"].width = 18
-
-
-def _append_pareto_section(ws, rows: list) -> None:
-    """Appends a Pareto analysis section below the existing Gantt chart data in
-    the 'Activity Timeline Chart' sheet (Tab 3).  Writes a data table sorted
-    descending by TMU, highlights the top row, then embeds a native combo
-    BarChart + LineChart (secondary axis) so the chart is fully editable inside
-    Excel."""
-    from openpyxl.chart import BarChart, LineChart, Reference
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-    TMU_TO_SEC = 0.036
-    total_tmu = sum(r.tmu for r in rows) if rows else 1
-    if total_tmu == 0:
-        total_tmu = 1
-
-    # Sort descending by TMU
-    sorted_rows = sorted(rows, key=lambda r: r.tmu, reverse=True)
-
-    # Find the last used row in the sheet
-    last_used = ws.max_row
-    section_start = last_used + 4  # leave 3 blank rows as visual separator
-
-    thin = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
-    )
-
-    # Section title banner
-    ws.merge_cells(
-        start_row=section_start, start_column=1,
-        end_row=section_start, end_column=5
-    )
-    title_cell = ws.cell(row=section_start, column=1)
-    title_cell.value = "PARETO ANALYSIS \u2014 Time by Activity (sorted descending)"
-    title_cell.font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
-    title_cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-    title_cell.alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[section_start].height = 30
-
-    # Sub-header row
-    header_row = section_start + 1
-    headers = ["Activity", "TMU", "Time (sec)", "% of Total", "Cumulative %"]
-    for col_idx, hdr in enumerate(headers, 1):
-        cell = ws.cell(row=header_row, column=col_idx, value=hdr)
-        cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
-        cell.fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = thin
-    ws.row_dimensions[header_row].height = 20
-
-    # Data rows
-    data_start = header_row + 1
-    cumulative_pct = 0.0
-    for i, r in enumerate(sorted_rows):
-        row_num = data_start + i
-        own_sec = r.tmu * TMU_TO_SEC
-        own_pct = (r.tmu / total_tmu) * 100
-        cumulative_pct += own_pct
-
-        values = [
-            r.elemental_description or f"Activity {r.s_no}",
-            r.tmu,
-            round(own_sec, 3),
-            round(own_pct, 2),
-            round(min(cumulative_pct, 100.0), 2),
-        ]
-        for col_idx, val in enumerate(values, 1):
-            cell = ws.cell(row=row_num, column=col_idx, value=val)
-            cell.border = thin
-            if col_idx == 1:
-                cell.alignment = Alignment(horizontal="left")
-            else:
-                cell.alignment = Alignment(horizontal="right")
-                cell.number_format = "0.00"
-
-            # Highlight top row (highest TMU) in amber
-            if i == 0:
-                cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")
-                cell.font = Font(name="Calibri", size=10, bold=True)
-            else:
-                cell.font = Font(name="Calibri", size=10)
-
-    data_end = data_start + len(sorted_rows) - 1
-
-    # Column widths
-    ws.column_dimensions["A"].width = max(ws.column_dimensions["A"].width or 0, 40)
-    ws.column_dimensions["B"].width = 10
-    ws.column_dimensions["C"].width = 12
-    ws.column_dimensions["D"].width = 12
-    ws.column_dimensions["E"].width = 14
-
-    # ── Native combo chart: BarChart (time sec) + LineChart (cumulative %) ──
-    bar = BarChart()
-    bar.type = "col"
-    bar.style = 10
-    bar.title = "Pareto — Activity Time & Cumulative %"
-    bar.y_axis.title = "Time (seconds)"
-    bar.x_axis.title = "Activity"
-    bar.grouping = "clustered"
-    bar.height = 14
-    bar.width = 24
-
-    # Bar data: Time (sec) column (col 3)
-    bar_data = Reference(ws, min_col=3, min_row=header_row, max_row=data_end)
-    bar_cats = Reference(ws, min_col=1, min_row=data_start, max_row=data_end)
-    bar.add_data(bar_data, titles_from_data=True)
-    bar.set_categories(bar_cats)
-
-    # Line chart: Cumulative % column (col 5)
-    line = LineChart()
-    line.y_axis.axId = 200
-    line.y_axis.title = "Cumulative %"
-    line.y_axis.crosses = "max"  # render on right
-    line.y_axis.scaling.min = 0
-    line.y_axis.scaling.max = 100
-
-    line_data = Reference(ws, min_col=5, min_row=header_row, max_row=data_end)
-    line.add_data(line_data, titles_from_data=True)
-    line.set_categories(bar_cats)
-
-    # Combine: bar absorbs the line on secondary axis
-    bar += line
-
-    chart_anchor_row = data_start
-    ws.add_chart(bar, f"G{chart_anchor_row}")
 
 
 def write_most_analysis_workbook(
@@ -330,7 +278,7 @@ def write_most_analysis_workbook(
     ws = wb[SHEET_NAME]
 
     _clear_existing_data_rows(ws)
-    _write_trace_headers(ws)
+    _format_trace_headers(ws)
 
     tables = load_most_tables()
     q_template = "=IF(E6=$E$1,($F$1&F6&$G$1&G6&$H$1&H6&$I$1&I6&$J$1&J6&$K$1&K6&$L$1&L6),IF(E6=$E$2,($F$2&F6&$G$2&G6&$H$2&H6&$I$2&I6&$J$2&J6&$K$2&K6&$L$2&L6),IF(E6=$E$3,($F$3&F6&$G$3&G6&$H$3&H6&$I$3&I6&$J$3&J6&$K$3&K6&$L$3&L6&$M$3&M6&$N$3&N6&$O$3&O6&$P$3&P6),IF(E6=$E$4,F6&\"SEC\"))))"
@@ -377,19 +325,15 @@ def write_most_analysis_workbook(
         ws[f"AM{r}"] = row.activity_timeline
         ws[f"AN{r}"] = row.uppercase_elemental_description
 
-    # Label column W header so it's human-readable in Excel
-    ws["W5"] = "TMU Time (sec)"
-
     last_row = FIRST_DATA_ROW + len(rows) - 1
     ws["D6"] = activity_description
     ws["W4"] = f"=SUM(W{FIRST_DATA_ROW}:W{last_row})"
 
-    # Generate dedicated Activity Timeline Chart worksheet tab (Tab 3)
-    _create_timeline_chart_sheet(wb, rows)
+    # Apply table borders, alignments, text wrap, column widths, and page layout
+    _apply_table_formatting(ws, last_row)
 
-    # Append Pareto section below the Gantt chart on the same Tab 3
-    ws_chart = wb["Activity Timeline Chart"]
-    _append_pareto_section(ws_chart, rows)
+    # Generate dedicated Activity Timeline Chart worksheet tab
+    _create_timeline_chart_sheet(wb, rows)
 
     wb.save(output_path)
     return output_path
