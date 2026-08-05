@@ -92,8 +92,8 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
                     <span>
                       {fmtTime(row.t_start_sec)}–{fmtTime(row.t_end_sec)}
                     </span>
-                    <span>{row.total_time_sec.toFixed(1)}s</span>
-                    <span>{row.tmu.toFixed(0)} TMU ({(row.tmu * 0.036).toFixed(1)}s)</span>
+                    <span>Video: {(row.activity_duration_sec || (row.t_end_sec - row.t_start_sec)).toFixed(1)}s</span>
+                    <span>MOST: {row.tmu.toFixed(0)} TMU ({(row.tmu * 0.036).toFixed(1)}s)</span>
                   </div>
                 </div>
                 <div className="text-right">

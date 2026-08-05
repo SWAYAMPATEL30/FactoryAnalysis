@@ -53,8 +53,9 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
               <th className="px-3.5 py-3 text-center">#</th>
               <th className="px-3.5 py-3 text-center">Card</th>
               <th className="px-4 py-3">Elemental Motion Description</th>
-              <th className="px-3.5 py-3 text-center">Timeline</th>
-              <th className="px-3.5 py-3 text-right">Sec</th>
+              <th className="px-3.5 py-3 text-center">Video Timeline</th>
+              <th className="px-3.5 py-3 text-right">Video Sec</th>
+              <th className="px-3.5 py-3 text-right">MOST Sec</th>
               <th className="px-3.5 py-3 text-right">TMU</th>
               <th className="px-3.5 py-3 text-center">Category</th>
               <th className="px-3.5 py-3 text-center">Confidence</th>
@@ -65,6 +66,7 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
               const bucket = bucketFor(row);
               const bStyle = BUCKET_STYLE[bucket] ?? BUCKET_STYLE.Noise;
               const isActive = i === activeIndex;
+              const videoDuration = row.activity_duration_sec > 0 ? row.activity_duration_sec : (row.t_end_sec - row.t_start_sec);
 
               return (
                 <tr
@@ -90,6 +92,9 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
                   </td>
                   <td className="px-3.5 py-3 text-center font-mono text-ink-faint whitespace-nowrap">
                     {fmtTime(row.t_start_sec)} – {fmtTime(row.t_end_sec)}
+                  </td>
+                  <td className="px-3.5 py-3 text-right font-mono text-ink-dim">
+                    {videoDuration.toFixed(1)}s
                   </td>
                   <td className="px-3.5 py-3 text-right font-mono text-ink font-semibold">
                     {(row.tmu * 0.036).toFixed(1)}s
