@@ -93,7 +93,7 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
                       {fmtTime(row.t_start_sec)}–{fmtTime(row.t_end_sec)}
                     </span>
                     <span>{row.total_time_sec.toFixed(1)}s</span>
-                    <span>{row.tmu.toFixed(0)} TMU</span>
+                    <span>{row.tmu.toFixed(0)} TMU ({(row.tmu * 0.036).toFixed(1)}s)</span>
                   </div>
                 </div>
                 <div className="text-right">
