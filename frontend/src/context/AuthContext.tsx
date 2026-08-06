@@ -14,6 +14,7 @@ interface AuthContextValue extends AuthState {
   signInWithEmail: (email: string, pass: string) => Promise<{ error?: string }>;
   signUpWithEmail: (email: string, pass: string, name: string, companyName: string, role: Role) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  resendVerificationEmail: (email: string) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   loading: boolean;
@@ -21,7 +22,6 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const STORAGE_KEY = "fa_auth";
-const USERS_DB_KEY = "fa_registered_users";
 
 export function validateEmailFormat(email: string): { valid: boolean; error?: string } {
   const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -137,38 +137,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginInternal(companyName, userName, role, email);
   }
 
-  async function signInWithEmail(email: string, pass: string): Promise<{ error?: string }> {
+  async function signInWithEmail(email: string, pass: string): Promise<{ error?: string, code?: string }> {
     try {
       const emailCheck = validateEmailFormat(email);
       if (!emailCheck.valid) {
         return { error: emailCheck.error };
       }
 
+      const normalizedEmail = email.toLowerCase().trim();
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password: pass,
       });
 
       if (error) {
-        // Local credential validation fallback if Supabase project keys are in anon setup
-        const localUsersRaw = localStorage.getItem(USERS_DB_KEY);
-        if (localUsersRaw) {
-          const registered = JSON.parse(localUsersRaw) as Record<string, { pass: string; name: string; companyName: string; role: Role }>;
-          const found = registered[email.toLowerCase()];
-          if (found) {
-            if (found.pass === pass) {
-              loginInternal(found.companyName, found.name, found.role, email);
-              return {};
-            }
-            return { error: "Invalid password for this email address." };
-          }
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          return { error: "Please verify your email before signing in.", code: "unconfirmed" };
         }
-        return { error: error.message || "Invalid credentials." };
+        // Generic error to prevent leaking registered emails
+        return { error: "Invalid email or password." };
       }
 
       if (data.session?.user) {
         const meta = data.session.user.user_metadata || {};
-        loginInternal(meta.companyName || "BorgWarner", meta.name || email.split("@")[0], meta.role || "engineer", email);
+        loginInternal(meta.companyName || "BorgWarner", meta.name || normalizedEmail.split("@")[0], meta.role || "engineer", normalizedEmail);
       }
       return {};
     } catch (err: any) {
@@ -184,15 +177,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const normalizedEmail = email.toLowerCase().trim();
-      const localUsersRaw = localStorage.getItem(USERS_DB_KEY);
-      const registered = localUsersRaw ? JSON.parse(localUsersRaw) : {};
 
-      // Check if email already exists in registered database
-      if (registered[normalizedEmail]) {
-        return { error: "An account with this email address already exists. Please sign in instead." };
+      // Explicit duplicate check via RPC
+      const { data: exists } = await supabase.rpc('check_email_exists', { p_email: normalizedEmail });
+      if (exists) {
+        return { error: "An account with this email already exists. Try signing in instead." };
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password: pass,
         options: {
@@ -206,18 +198,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error.message.toLowerCase().includes("already exists") ||
           (error as any).status === 422
         ) {
-          return { error: "An account with this email address already exists. Please sign in instead." };
+          return { error: "An account with this email already exists. Try signing in instead." };
         }
+        return { error: error.message };
       }
 
-      // Save user profile locally for persistence
-      registered[normalizedEmail] = { pass, name, companyName, role };
-      localStorage.setItem(USERS_DB_KEY, JSON.stringify(registered));
+      // Safety net: empty identities array means duplicate
+      if (data?.user?.identities && data.user.identities.length === 0) {
+        return { error: "An account with this email already exists. Try signing in instead." };
+      }
 
-      loginInternal(companyName, name, role, normalizedEmail);
+      // Do NOT call loginInternal here; user must verify email first.
       return {};
     } catch (err: any) {
       return { error: err?.message || "Failed to create account." };
+    }
+  }
+
+  async function resendVerificationEmail(email: string): Promise<{ error?: string }> {
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: normalizedEmail
+      });
+      if (error) return { error: error.message };
+      return {};
+    } catch (err: any) {
+      return { error: err?.message || "Failed to resend verification email." };
     }
   }
 
@@ -256,20 +264,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        ...state,
-        login,
-        signInWithEmail,
-        signUpWithEmail,
-        signInWithGoogle,
-        logout,
-        isAuthenticated: !!state.user,
-        loading,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+      <AuthContext.Provider value={{ ...state, login, signInWithEmail, signUpWithEmail, signInWithGoogle, resendVerificationEmail, logout, isAuthenticated: !!state.user, loading }}>
+        {children}
+      </AuthContext.Provider>
   );
 }
 

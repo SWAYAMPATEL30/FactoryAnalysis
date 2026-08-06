@@ -125,30 +125,7 @@ export function PricingPage() {
           ))}
         </div>
 
-        {/* Per-analysis cost breakdown */}
-        <div className="mx-auto max-w-2xl mt-16 rounded-xl border border-line bg-raised p-8">
-          <h3 className="font-display font-bold text-xl uppercase text-ink mb-6">
-            What does one analysis actually cost to run?
-          </h3>
-          <div className="flex flex-col gap-3 font-mono text-sm">
-            {[
-              ["Cloud Run compute (4 vCPU × 285s)", "$0.027"],
-              ["Cloud Run memory (8 GiB × 285s)", "$0.006"],
-              ["Vertex AI Gemini Flash (input tokens)", "$0.001"],
-              ["Vertex AI Gemini Flash (output tokens)", "$0.001"],
-              ["GCP Cloud Storage (20 MB video, 1 month)", "$0.0004"],
-            ].map(([item, cost]) => (
-              <div key={item} className="flex justify-between border-b border-line pb-2 text-ink-dim">
-                <span>{item}</span>
-                <span className="text-accent">{cost}</span>
-              </div>
-            ))}
-            <div className="flex justify-between font-bold text-ink pt-1">
-              <span>Total per 1-minute 1080p video</span>
-              <span className="text-accent">~$0.035</span>
-            </div>
-          </div>
-        </div>
+
       </section>
     </div>
   );

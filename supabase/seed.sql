@@ -1,0 +1,75 @@
+-- ============================================================================
+-- Seed Data for Factory Video Analysis SaaS
+--
+-- Creates demo data for local development and testing.
+-- Run with:  supabase db reset   (applies migrations + seed automatically)
+--        or: psql < supabase/seed.sql
+--
+-- NOTE: This seed is designed for local Supabase (supabase start).
+-- In production, user creation happens through Supabase Auth sign-up,
+-- which triggers handle_new_user() automatically.
+-- ============================================================================
+
+-- ============================================================================
+-- 1. Demo credit packages (reference data, not tenant-scoped)
+-- ============================================================================
+-- These would normally live in a config table or env vars.
+-- Documented here for reference:
+--
+--   starter:  $0    →  5 credits  (first-time bonus)
+--   basic:    $29   → 50 credits
+--   pro:      $99   → 250 credits
+--   enterprise: custom
+
+
+-- ============================================================================
+-- 2. Seed a test organization (for local dev WITHOUT Supabase Auth)
+--
+-- When using Supabase Auth locally, the handle_new_user() trigger
+-- automatically creates profile + org + wallet on sign-up.
+-- The seed below is only useful if you need test data without going
+-- through the auth flow.
+-- ============================================================================
+
+-- To seed with Supabase Auth, create a user via the Auth dashboard at
+-- http://localhost:54323 or via the JS client:
+--
+--   const { data } = await supabase.auth.signUp({
+--     email: 'demo@factory.test',
+--     password: 'testpassword123',
+--     options: { data: { full_name: 'Demo Engineer' } }
+--   });
+--
+-- The trigger will auto-create:
+--   - profiles row
+--   - organizations row ("Demo Engineer's Factory")
+--   - organization_members row (role: owner)
+--   - credit_wallets row (0 credits)
+--
+-- Then manually grant starter credits:
+--
+--   UPDATE credit_wallets
+--   SET available_credits = 5
+--   WHERE organization_id = '<org-id>';
+--
+--   INSERT INTO credit_transactions (
+--     organization_id, user_id, transaction_type,
+--     amount, available_balance_after, reserved_balance_after,
+--     idempotency_key
+--   ) VALUES (
+--     '<org-id>', '<user-id>', 'purchase',
+--     5, 5, 0,
+--     'seed-starter-' || gen_random_uuid()::text
+--   );
+
+
+-- ============================================================================
+-- 3. Workstation templates (inserted after org creation)
+-- ============================================================================
+-- Example workstations to insert after creating an org:
+--
+--   INSERT INTO workstations (organization_id, name, code, created_by)
+--   VALUES
+--     ('<org-id>', 'Assembly Line 1',  'AL-01', '<user-id>'),
+--     ('<org-id>', 'Press Station',    'PS-01', '<user-id>'),
+--     ('<org-id>', 'Packing Station',  'PK-01', '<user-id>');

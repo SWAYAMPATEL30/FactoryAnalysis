@@ -11,6 +11,19 @@ IF()s -- see the note below.
 Sheet 2 ('VA SVA NVA Summary') is left completely untouched: its SUMIF/pivot
 formulas already reference whole columns on Sheet 1, so they keep working
 unmodified as rows are added.
+
+Two latent bugs in the original workbook's Y/Z/AA/AB formulas, found while
+building this (neither is exercised by the example workbook's own 26 rows,
+so they were invisible until now):
+  1. Ref 0 (Noise) satisfies "V<23" and is silently counted as NVA time.
+  2. Ref 23 ("Manual testing", taxonomy classification NVA) satisfies
+     none of Y/Z/AA/AB's range conditions and is silently dropped
+     from every bucket.
+Both stem from bucketing by numeric ref ranges instead of the taxonomy's own
+classification field. Since the taxonomy is required to be versioned/editable
+(refs can move -- ref 48/50 already did in this build), this writer buckets
+new rows via VLOOKUP against the taxonomy's classification column instead,
+which is immune to both bugs and to any future renumbering.
 """
 from __future__ import annotations
 
@@ -19,17 +32,15 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 from openpyxl.formula.translate import Translator
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
 
 from app.config.most_tables import load_most_tables
 from app.models.schemas import MostRow
 
 SHEET_NAME = "MOST Analysis"
 FIRST_DATA_ROW = 6
-MAX_CLEAR_COL = 45  # headroom above AN (col 40)
+MAX_CLEAR_COL = 45  # generous headroom above AM (col 39)
 
-# Extra traceability & activity columns, appended after template's AC (col 29).
+# Extra traceability & activity columns, appended after the template's own AC (col 29).
 TRACE_HEADERS = {
     "AD": "Source Video",
     "AE": "Segment Start (s)",
@@ -44,113 +55,35 @@ TRACE_HEADERS = {
     "AN": "Elemental Description",
 }
 
-# Explicit column widths for perfect layout & PDF print export
-COLUMN_WIDTHS = {
-    "A": 8, "B": 20, "C": 12, "D": 26, "E": 12,
-    "F": 5, "G": 5, "H": 5, "I": 5, "J": 5, "K": 5, "L": 5, "M": 5, "N": 5, "O": 5, "P": 5,
-    "Q": 24, "R": 8, "S": 12, "T": 38, "U": 10, "V": 12, "W": 12, "X": 16,
-    "Y": 10, "Z": 10, "AA": 10, "AB": 10, "AC": 22,
-    "AD": 32, "AE": 16, "AF": 16, "AG": 22, "AH": 22, "AI": 13, "AJ": 16, "AK": 38, "AL": 20, "AM": 26, "AN": 45
-}
-
 
 def _clear_existing_data_rows(ws) -> None:
+    from openpyxl.utils import get_column_letter
+
     for r in range(FIRST_DATA_ROW, ws.max_row + 1):
         for c in range(1, MAX_CLEAR_COL + 1):
             ws[f"{get_column_letter(c)}{r}"] = None
 
 
-def _format_trace_headers(ws) -> None:
-    """Formats top banner (AD1:AN4) and table header row 5 for columns AD through AN
-    matching the professional styling of columns A through AC."""
-    # Top Banner Title for Traceability section (AD4:AN4)
-    ws.merge_cells("AD4:AN4")
-    banner_cell = ws["AD4"]
-    banner_cell.value = "AI Vision Traceability & Segment Telemetry"
-    banner_cell.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    banner_cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-    banner_cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    # Header Row 5 formatting for AD through AN
-    header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-    header_font = Font(name="Calibri", size=10, bold=True, color="1F4E79")
-    header_border = Border(
-        left=Side(style="thin", color="808080"),
-        right=Side(style="thin", color="808080"),
-        top=Side(style="thin", color="808080"),
-        bottom=Side(style="medium", color="1F4E79"),
-    )
-    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-    ws.row_dimensions[4].height = 24
-    ws.row_dimensions[5].height = 28
-
+def _write_trace_headers(ws) -> None:
+    from copy import copy
+    template_cell = ws["AC5"]
     for col, header in TRACE_HEADERS.items():
         cell = ws[f"{col}5"]
         cell.value = header
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.border = header_border
-        cell.alignment = header_alignment
-
-
-def _apply_table_formatting(ws, last_row: int) -> None:
-    """Applies clean borders, text wrapping, alignments, and column widths across all data cells A6:AN{last_row}."""
-    thin_border = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
-    )
-    data_font = Font(name="Calibri", size=10)
-
-    # Center alignment for code/meta columns
-    center_align = Alignment(horizontal="center", vertical="center")
-    # Left alignment with text wrap for descriptions
-    left_wrap_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    # Right alignment for numerical columns
-    right_align = Alignment(horizontal="right", vertical="center")
-
-    left_wrap_cols = {"D", "T", "AD", "AK", "AM", "AN"}
-    right_align_cols = {"A", "B", "C", "R", "S", "W", "AE", "AF", "AI", "AL"}
-
-    for r in range(FIRST_DATA_ROW, last_row + 1):
-        ws.row_dimensions[r].height = 26
-        for col_idx in range(1, 41):  # A to AN (1 to 40)
-            col_letter = get_column_letter(col_idx)
-            cell = ws[f"{col_letter}{r}"]
-            cell.font = data_font
-            cell.border = thin_border
-
-            if col_letter in left_wrap_cols:
-                cell.alignment = left_wrap_align
-            elif col_letter in right_align_cols:
-                cell.alignment = right_align
-            else:
-                cell.alignment = center_align
-
-            # Number formatting
-            if col_letter in ("S", "W"):
-                cell.number_format = "#,##0.00"
-            elif col_letter in ("AE", "AF", "AI", "AL"):
-                cell.number_format = "0.00"
-
-    # Set column widths
-    for col_letter, width in COLUMN_WIDTHS.items():
-        ws.column_dimensions[col_letter].width = width
-
-    # Configure page setup for clean PDF conversion / print export
-    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
-    ws.page_setup.paperSize = ws.PAPERSIZE_A4
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
+        if template_cell.has_style:
+            cell.font = copy(template_cell.font)
+            cell.border = copy(template_cell.border)
+            cell.fill = copy(template_cell.fill)
+            cell.number_format = copy(template_cell.number_format)
+            cell.protection = copy(template_cell.protection)
+            cell.alignment = copy(template_cell.alignment)
 
 
 def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     """Creates a dedicated 'Activity Timeline Chart' worksheet with a visual Gantt chart
     displaying the chronological distribution, durations, and category breakdowns of all activities."""
     from openpyxl.chart import BarChart, Reference
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
     chart_sheet_name = "Activity Timeline Chart"
     if chart_sheet_name in wb.sheetnames:
@@ -218,7 +151,6 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
             c.border = thin_border
             if col in (2, 3, 4):
                 c.alignment = Alignment(horizontal="right")
-                c.number_format = "0.00"
             else:
                 c.alignment = Alignment(horizontal="left")
 
@@ -246,8 +178,10 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     chart.y_axis.title = "Activities"
     chart.legend = None
 
+    # Embed chart beside table
     ws_chart.add_chart(chart, "I3")
 
+    # Column widths
     ws_chart.column_dimensions["A"].width = 38
     ws_chart.column_dimensions["B"].width = 15
     ws_chart.column_dimensions["C"].width = 15
@@ -278,12 +212,16 @@ def write_most_analysis_workbook(
     ws = wb[SHEET_NAME]
 
     _clear_existing_data_rows(ws)
-    _format_trace_headers(ws)
+    _write_trace_headers(ws)
 
     tables = load_most_tables()
     q_template = "=IF(E6=$E$1,($F$1&F6&$G$1&G6&$H$1&H6&$I$1&I6&$J$1&J6&$K$1&K6&$L$1&L6),IF(E6=$E$2,($F$2&F6&$G$2&G6&$H$2&H6&$I$2&I6&$J$2&J6&$K$2&K6&$L$2&L6),IF(E6=$E$3,($F$3&F6&$G$3&G6&$H$3&H6&$I$3&I6&$J$3&J6&$K$3&K6&$L$3&L6&$M$3&M6&$N$3&N6&$O$3&O6&$P$3&P6),IF(E6=$E$4,F6&\"SEC\"))))"
     s_template = "=IF(E6=$E$4,R6*F6/0.036,(SUM(F6:P6)*10*R6))"
     ac_template = "=VLOOKUP(V6,'VA SVA NVA Summary'!A:E,3,0)"
+    from copy import copy
+    template_data_cell = ws["AC6"]
+    template_border = copy(template_data_cell.border) if template_data_cell.has_style else None
+    template_alignment = copy(template_data_cell.alignment) if template_data_cell.has_style else None
 
     for i, row in enumerate(rows):
         r = FIRST_DATA_ROW + i
@@ -324,13 +262,23 @@ def write_most_analysis_workbook(
         ws[f"AL{r}"] = row.activity_duration_sec
         ws[f"AM{r}"] = row.activity_timeline
         ws[f"AN{r}"] = row.uppercase_elemental_description
+        
+        # Apply borders to all columns for this data row (A to AN is col 1 to 40)
+        for c in range(1, 41):
+            cell = ws.cell(row=r, column=c)
+            if template_border:
+                cell.border = template_border
+            if template_alignment and c >= 30: # Only apply alignment to new columns AD-AN to not break original
+                cell.alignment = template_alignment
 
     last_row = FIRST_DATA_ROW + len(rows) - 1
+    
+    # Delete excess rows that might have leftover formatting from the template
+    if ws.max_row > last_row:
+        ws.delete_rows(last_row + 1, ws.max_row - last_row)
+
     ws["D6"] = activity_description
     ws["W4"] = f"=SUM(W{FIRST_DATA_ROW}:W{last_row})"
-
-    # Apply table borders, alignments, text wrap, column widths, and page layout
-    _apply_table_formatting(ws, last_row)
 
     # Generate dedicated Activity Timeline Chart worksheet tab
     _create_timeline_chart_sheet(wb, rows)

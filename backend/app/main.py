@@ -5,22 +5,19 @@ job status tracking, human review flag clearance, and Excel report downloading.
 """
 from __future__ import annotations
 
-import asyncio
-import json
-import os
 import re
 import shutil
 import time
 import uuid
+import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
-from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, BackgroundTasks, UploadFile, File, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from fastapi.middleware.cors import CORSMiddleware
 from app.models.schemas import Classification, MostRow, ReviewFlag, Segment
 from app.pipeline.stage8_human_review import HumanReviewEngine
 from app.pipeline.stage7_excel_writer import write_most_analysis_workbook
@@ -30,6 +27,7 @@ from app.pipeline.stage4_segmentation import segment_video
 from app.pipeline.stage5_classification import classify_segments
 from app.pipeline.stage6_tmu_engine import build_most_row
 from app.services.gemini_client import GeminiClient
+from app.services.storage_cleanup import enforce_storage_limits, verify_disk_space
 
 app = FastAPI(
     title="MOST Factory Video Analysis API",
@@ -37,8 +35,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow all origins so the React frontend can call the API
-# regardless of whether it is served from the same domain or a CDN.
+@app.on_event("startup")
+def startup_event():
+    print("Application starting up, scanning /app/data/uploads...")
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,41 +48,91 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/health", tags=["ops"])
-def health_check():
-    """Railway / load-balancer health probe. Returns 200 when the service is up."""
-    return {"status": "ok"}
-
 ROOT_DIR = Path(__file__).parent.parent.parent
 UPLOAD_DIR = ROOT_DIR / "data" / "uploads"
 TEMPLATE_PATH = ROOT_DIR / "data" / "templates" / "most_analysis_template.xlsx"
 SAMPLE_VIDEO_PATH = ROOT_DIR / "data" / "samples" / "assy_with_press_operation.mp4"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# 512 MB upload cap — prevents OOM on large files.
-_MAX_UPLOAD_BYTES = 512 * 1024 * 1024
-
 MANUAL_SEC_PER_MOTION = 180
 
-# In-memory job store for Phase 0/1 (pluggable to DB in cloud deployment)
+# In-memory job store with disk-backed JSON persistence
 JOBS: Dict[str, Dict[str, Any]] = {}
-
-# Per-job event log for SSE streaming (list of dicts with stage/status/detail/progress)
-JOB_EVENTS: Dict[str, List[dict]] = {}
+JOBS_DB_PATH = UPLOAD_DIR / "jobs_db.json"
 
 
-def _emit(job_id: str, stage: str, status: str, detail: str = "", progress: float | None = None) -> None:
-    """Append a progress event to JOB_EVENTS for SSE streaming."""
-    event = {
-        "stage": stage,
-        "status": status,  # pending | running | done | error
-        "detail": detail,
-        "progress": progress,
-        "ts": time.time(),
-    }
-    JOB_EVENTS.setdefault(job_id, []).append(event)
-    JOBS.setdefault(job_id, {})["last_event"] = event
+def _save_jobs_to_disk() -> None:
+    """Persist jobs state and rows to disk so data survives server restarts."""
+    try:
+        data = {}
+        for j_id, job in JOBS.items():
+            engine: HumanReviewEngine | None = job.get("review_engine")
+            rows = engine.get_finalized_rows() if engine else job.get("rows", [])
+            segments = job.get("segments", [])
+            flags = engine.get_pending_flags() if engine else job.get("flags", [])
+
+            data[j_id] = {
+                "status": job.get("status"),
+                "phase": job.get("phase"),
+                "raw_video_path": str(job.get("raw_video_path")) if job.get("raw_video_path") else None,
+                "output_excel_path": str(job.get("output_excel_path")) if job.get("output_excel_path") else None,
+                "activity_description": job.get("activity_description", ""),
+                "station_no": job.get("station_no", ""),
+                "activity_no": job.get("activity_no", ""),
+                "error": job.get("error"),
+                "elapsed_sec": job.get("elapsed_sec"),
+                "estimated_manual_sec": job.get("estimated_manual_sec"),
+                "rows": [r.model_dump() for r in rows],
+                "segments": [s.model_dump() for s in segments],
+                "flags": [f.model_dump() for f in flags],
+            }
+
+        tmp_path = JOBS_DB_PATH.with_suffix(".tmp")
+        tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp_path.replace(JOBS_DB_PATH)
+    except Exception as e:
+        print(f"Warning: Failed to persist jobs to disk: {e}")
+
+
+def _load_jobs_from_disk() -> None:
+    """Load persisted jobs from disk into JOBS dictionary on startup."""
+    if not JOBS_DB_PATH.exists():
+        return
+    try:
+        data = json.loads(JOBS_DB_PATH.read_text(encoding="utf-8"))
+        for j_id, item in data.items():
+            raw_video = Path(item["raw_video_path"]) if item.get("raw_video_path") else None
+            excel_path = Path(item["output_excel_path"]) if item.get("output_excel_path") else None
+
+            rows = [MostRow(**r) for r in item.get("rows", [])]
+            segments = [Segment(**s) for s in item.get("segments", [])]
+            flags = [ReviewFlag(**f) for f in item.get("flags", [])]
+
+            engine = HumanReviewEngine(rows, segments, flags) if (rows or segments or flags) else None
+
+            JOBS[j_id] = {
+                "status": item.get("status", "COMPLETED"),
+                "phase": item.get("phase", "COMPLETED"),
+                "raw_video_path": raw_video,
+                "output_excel_path": excel_path,
+                "activity_description": item.get("activity_description", ""),
+                "station_no": item.get("station_no", ""),
+                "activity_no": item.get("activity_no", ""),
+                "error": item.get("error"),
+                "elapsed_sec": item.get("elapsed_sec", 30.0),
+                "estimated_manual_sec": item.get("estimated_manual_sec"),
+                "rows": rows,
+                "segments": segments,
+                "flags": flags,
+                "review_engine": engine,
+                "excel_path": excel_path,
+            }
+    except Exception as e:
+        print(f"Warning: Failed to load jobs from disk: {e}")
+
+
+_load_jobs_from_disk()
+
 
 
 class JobStatusResponse(BaseModel):
@@ -107,94 +158,92 @@ class ReviewSubmission(BaseModel):
 def _create_job(
     background_tasks: BackgroundTasks,
     job_id: str,
+    analysis_dir: Path,
     raw_video_path: Path,
     activity_description: str,
     station_no: str,
     activity_no: str,
-    fast_mode: bool = False,
 ) -> str:
-    output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
+    output_excel_path = analysis_dir / "report.xlsx"
+    output_json_path = analysis_dir / "report.json"
 
     JOBS[job_id] = {
         "status": "QUEUED",
         "phase": "QUEUED",
+        "analysis_dir": analysis_dir,
         "raw_video_path": raw_video_path,
         "output_excel_path": output_excel_path,
+        "output_json_path": output_json_path,
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
-        "fast_mode": fast_mode,
     }
+    _save_jobs_to_disk()
 
     background_tasks.add_task(
         _process_video_job,
         job_id,
+        analysis_dir,
         raw_video_path,
         output_excel_path,
+        output_json_path,
         activity_description,
         station_no,
         activity_no,
-        fast_mode,
     )
     return job_id
 
 
 def _process_video_job(
     job_id: str,
+    analysis_dir: Path,
     raw_video_path: Path,
     output_excel_path: Path,
+    output_json_path: Path,
     activity_desc: str,
     station_no: str = "",
     activity_no: str = "",
-    fast_mode: bool = False,
 ) -> None:
     try:
         JOBS[job_id]["status"] = "PROCESSING"
         JOBS[job_id]["started_at"] = time.monotonic()
+        _save_jobs_to_disk()
 
-        # Stage 2: Face blur
+        # 1. Mandatory face blur pass
         JOBS[job_id]["phase"] = "PREPROCESSING"
-        _emit(job_id, "PREPROCESSING", "running", "Detecting and blurring faces…", 0.0)
-        blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
+        _save_jobs_to_disk()
+        blurred_path = analysis_dir / "blurred.mp4"
         blur_faces(raw_video_path, blurred_path)
-        _emit(job_id, "PREPROCESSING", "done", "Face blur complete", 1.0)
+        
 
-        # Stage 3: CV tracking
-        mode_label = "fast (640p, 2fps, skip frames)" if fast_mode else "accurate (full res, 4fps)"
-        _emit(job_id, "CV_TRACKING", "running", f"Running CV hand tracking [{mode_label}]…", 0.0)
+
+        # 2. Stage 3: CV tracking — produces objective hand-state timing events
         JOBS[job_id]["phase"] = "PREPROCESSING"
         try:
-            fps = 2.0 if fast_mode else 4.0
-            tracker = CVTracker(sample_fps=fps, fast_mode=fast_mode)
+            tracker = CVTracker(sample_fps=10.0)
             motion_events = tracker.build_motion_event_stream(blurred_path)
-            _emit(job_id, "CV_TRACKING", "done", f"Found {len(motion_events)} motion events", 1.0)
-        except Exception as cv_err:
-            motion_events = None
-            _emit(job_id, "CV_TRACKING", "done", f"CV tracking skipped: {cv_err}", 1.0)
+        except Exception:
+            motion_events = None  # non-fatal: Stage 4 degrades gracefully without events
 
-        # Stage 4: Upload video to Gemini
+        # 3. Gemini Client & upload
         JOBS[job_id]["phase"] = "UPLOADING"
-        _emit(job_id, "UPLOADING", "running", "Uploading blurred video to Gemini…", 0.0)
+        _save_jobs_to_disk()
         client = GeminiClient()
         uploaded_video = client.upload_video(blurred_path)
-        _emit(job_id, "UPLOADING", "done", "Video ready for VLM analysis", 1.0)
 
-        # Stage 5: VLM Segmentation
+        # 4. VLM Segmentation
         JOBS[job_id]["phase"] = "SEGMENTING"
-        _emit(job_id, "SEGMENTING", "running", "Gemini identifying elemental motion boundaries…", 0.0)
-        segments = segment_video(client, uploaded_video, str(raw_video_path), motion_events=motion_events)
-        _emit(job_id, "SEGMENTING", "done", f"Found {len(segments)} motion segments", 1.0)
+        _save_jobs_to_disk()
+        segments = segment_video(client, uploaded_video, str(blurred_path.name), motion_events=motion_events)
 
-        # Stage 6: Structured Classification
+        # 4. Structured Classification
         JOBS[job_id]["phase"] = "CLASSIFYING"
-        _emit(job_id, "CLASSIFYING", "running", f"Classifying {len(segments)} segments against MOST data cards…", 0.0)
-        classifications, review_flags = classify_segments(client, segments)
-        _emit(job_id, "CLASSIFYING", "done",
-              f"{len(classifications)} classified, {len(review_flags)} flagged for review", 1.0)
+        _save_jobs_to_disk()
+        classifications, review_flags = classify_segments(client, uploaded_video, segments)
 
-        # Stage 7: TMU Engine + Excel
+        # 5. Deterministic TMU Engine
         JOBS[job_id]["phase"] = "FINALIZING"
-        _emit(job_id, "FINALIZING", "running", "Computing TMU values and building Excel report…", 0.0)
+        _save_jobs_to_disk()
         rows: list[MostRow] = []
         for i, seg in enumerate(segments):
             cls = classifications.get(seg.segment_id)
@@ -206,8 +255,12 @@ def _process_video_job(
                     r.activity_no = activity_no
                 rows.append(r)
 
+        # 6. Write Excel and JSON Report
         write_most_analysis_workbook(rows, TEMPLATE_PATH, output_excel_path, activity_desc)
-        _emit(job_id, "FINALIZING", "done", f"{len(rows)} rows written to workbook", 1.0)
+        
+        import json
+        with open(output_json_path, "w") as f:
+            json.dump([r.model_dump() for r in rows], f, indent=2)
 
         # Store results
         engine = HumanReviewEngine(rows, segments, review_flags)
@@ -219,55 +272,78 @@ def _process_video_job(
         JOBS[job_id]["flags"] = review_flags
         JOBS[job_id]["review_engine"] = engine
         JOBS[job_id]["excel_path"] = output_excel_path
-        _emit(job_id, "COMPLETED", "done", f"Analysis complete — {len(rows)} motions classified", 1.0)
+        _save_jobs_to_disk()
     except Exception as e:
         JOBS[job_id]["status"] = "FAILED"
         JOBS[job_id]["phase"] = "FAILED"
         JOBS[job_id]["error"] = str(e)
-        _emit(job_id, "FAILED", "error", str(e))
+        _save_jobs_to_disk()
+    finally:
+        print(f"Starting post-processing cleanup for job {job_id}...")
+        try:
+            if raw_video_path.exists():
+                raw_video_path.unlink(missing_ok=True)
+                print(f"Deleted original.mp4")
+            
+            # We MUST KEEP blurred.mp4 so the React frontend can stream the video!
+            keep_files = {"report.xlsx", "report.json", "blurred.mp4"}
+            if analysis_dir.exists():
+                for file_path in analysis_dir.iterdir():
+                    if file_path.is_file() and file_path.name not in keep_files:
+                        try:
+                            file_path.unlink(missing_ok=True)
+                            print(f"Deleted temporary file {file_path.name}")
+                        except Exception as e:
+                            print(f"Warning: Failed to delete {file_path.name}: {e}")
+                    elif file_path.is_dir():
+                        try:
+                            shutil.rmtree(file_path, ignore_errors=True)
+                            print(f"Deleted temporary directory {file_path.name}")
+                        except Exception as e:
+                            print(f"Warning: Failed to delete dir {file_path.name}: {e}")
+                            
+            print("Post-processing cleanup completed.")
+            enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+        except Exception as e:
+            print(f"Warning: Post-processing cleanup failed: {e}")
+
 
 
 @app.post("/api/v1/analyze", response_model=JobStatusResponse)
 async def analyze_video(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    activity_description: str = Form("ASSY WITH PRESS OPERATION"),
-    station_no: str = Form(""),
-    activity_no: str = Form(""),
-    fast_mode: bool = Form(False),
-    use_cv_tracking: str = Form(None),
+    activity_description: str = "ASSY WITH PRESS OPERATION",
+    station_no: str = "",
+    activity_no: str = "",
 ):
-    """Upload a factory floor video clip to launch automated MOST study analysis.
-    
-    If fast_mode=True, Stage 3 CV tracking uses aggressive optimizations (downscaling,
-    frame skipping, 2fps) to finish in ~30s instead of ~7 mins.
-    """
-    # Backwards compatibility for cached frontends
-    if use_cv_tracking == "false":
-        fast_mode = True
-        
+    """Upload a factory floor video clip to launch automated MOST study analysis."""
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_{file.filename}"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
 
-    # Stream to disk in chunks to avoid reading the whole file into memory.
-    total = 0
-    with open(raw_video_path, "wb") as out:
-        while True:
-            chunk = await file.read(1024 * 1024)  # 1 MB chunks
-            if not chunk:
-                break
-            total += len(chunk)
-            if total > _MAX_UPLOAD_BYTES:
-                raw_video_path.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail="File exceeds 512 MB limit")
-            out.write(chunk)
+    # CLEANUP BEFORE UPLOAD TO PREVENT Errno 28 No space left on device
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    
+    # VERIFY DISK SPACE
+    required_bytes = int(request.headers.get("content-length", 0)) + 50_000_000  # 50MB buffer
+    if not verify_disk_space(UPLOAD_DIR, required_bytes):
+        raise HTTPException(status_code=507, detail="Insufficient disk space on server. Please try again later.")
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no, fast_mode)
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
+
+    # Streaming write to avoid reading huge videos into RAM
+    with open(raw_video_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    _create_job(background_tasks, job_id, analysis_dir, raw_video_path, activity_description, station_no, activity_no)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 
 @app.post("/api/v1/analyze/sample", response_model=JobStatusResponse)
 async def analyze_sample_video(
+    request: Request,
     background_tasks: BackgroundTasks,
     activity_description: str = "ASSY WITH PRESS OPERATION",
     station_no: str = "",
@@ -276,13 +352,24 @@ async def analyze_sample_video(
     """Runs the pipeline against a bundled sample video."""
     sample_path = ROOT_DIR / "data" / "samples" / "assy_with_press_operation.mp4"
     if not sample_path.exists():
+        # Fallback to kit video if available
+        sample_path = Path(r"C:\Users\ipate\Downloads\kit.mp4")
+    if not sample_path.exists():
         raise HTTPException(status_code=404, detail="Sample video not available on this server")
 
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_sample.mp4"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
+    
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    required_bytes = sample_path.stat().st_size + 50_000_000
+    if not verify_disk_space(UPLOAD_DIR, required_bytes):
+        raise HTTPException(status_code=507, detail="Insufficient disk space on server. Please try again later.")
+        
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
     shutil.copy(sample_path, raw_video_path)
 
-    _create_job(background_tasks, job_id, raw_video_path, activity_description, station_no, activity_no)
+    _create_job(background_tasks, job_id, analysis_dir, raw_video_path, activity_description, station_no, activity_no)
     return JobStatusResponse(job_id=job_id, status="QUEUED")
 
 
@@ -293,14 +380,22 @@ async def analyze_demo_video(
     activity_no: str = "A-101",
 ):
     """Instantly generates a pre-analyzed demo job with complete MOST rows and Excel report."""
-    sample_path = ROOT_DIR / "data" / "samples" / "assy_with_press_operation.mp4"
+    sample_path = Path(r"C:\Users\ipate\Downloads\kit.mp4")
+    if not sample_path.exists():
+        sample_path = ROOT_DIR / "data" / "samples" / "assy_with_press_operation.mp4"
 
     job_id = str(uuid.uuid4())
-    raw_video_path = UPLOAD_DIR / f"{job_id}_demo.mp4"
+    analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
+    
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    raw_video_path = analysis_dir / "original.mp4"
     if sample_path.exists():
         shutil.copy(sample_path, raw_video_path)
 
-    output_excel_path = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
+    output_excel_path = analysis_dir / "report.xlsx"
+    output_json_path = analysis_dir / "report.json"
 
     # Pre-packaged motion sequence for demo video
     motion_defs = [
@@ -352,10 +447,8 @@ async def analyze_demo_video(
                 ReviewFlag(
                     segment_id=i + 1,
                     reason=f"Low confidence ({cls.confidence*100:.0f}%) on classification card {card}",
-                    confidence=cls.confidence,
-                    attempted_data_card=card,
-                    attempted_param_values=params,
-                    attempted_muda_ref=muda,
+                    suggested_card=card,
+                    suggested_params=params,
                 )
             )
 
@@ -367,8 +460,10 @@ async def analyze_demo_video(
         "phase": "COMPLETED",
         "started_at": time.monotonic() - 30.0,
         "completed_at": time.monotonic(),
+        "analysis_dir": analysis_dir,
         "raw_video_path": raw_video_path,
         "output_excel_path": output_excel_path,
+        "output_json_path": output_json_path,
         "activity_description": activity_description,
         "station_no": station_no,
         "activity_no": activity_no,
@@ -378,6 +473,12 @@ async def analyze_demo_video(
         "review_engine": engine,
         "excel_path": output_excel_path,
     }
+    
+    # Dump JSON for demo
+    import json
+    with open(output_json_path, "w") as f:
+        json.dump([r.model_dump() for r in rows], f, indent=2)
+    _save_jobs_to_disk()
 
     return JobStatusResponse(
         job_id=job_id,
@@ -477,69 +578,19 @@ async def get_job_video(job_id: str, request: Request):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    video_path: Path = job.get("raw_video_path")
-    if not video_path or not video_path.exists():
-        raise HTTPException(status_code=404, detail="Video file missing")
+    analysis_dir: Path = job.get("analysis_dir")
+    if not analysis_dir or not analysis_dir.exists():
+        raise HTTPException(status_code=404, detail="Analysis directory missing")
+
+    # The UI plays the blurred video. Original may have been deleted to save space.
+    video_path = analysis_dir / "blurred.mp4"
+    if not video_path.exists():
+        video_path = analysis_dir / "original.mp4"
+        if not video_path.exists():
+            raise HTTPException(status_code=404, detail="Video file missing")
 
     range_header = request.headers.get("range")
     return _ranged_file_response(video_path, range_header, "video/mp4")
-
-
-@app.get("/api/v1/jobs/{job_id}/stream")
-async def stream_job_events(job_id: str):
-    """Server-Sent Events (SSE) stream for live pipeline progress."""
-    async def event_generator():
-        last_yielded_idx = 0
-        while True:
-            events = JOB_EVENTS.get(job_id, [])
-            # Yield any new events
-            while last_yielded_idx < len(events):
-                event = events[last_yielded_idx]
-                yield f"data: {json.dumps(event)}\n\n"
-                last_yielded_idx += 1
-            
-            # Check if job is terminal
-            job = JOBS.get(job_id)
-            if job and job.get("status") in ("COMPLETED", "FAILED"):
-                # Job finished, close stream
-                break
-                
-            await asyncio.sleep(0.5)
-
-    headers = {
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-    }
-    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
-
-
-@app.get("/api/v1/jobs/{job_id}/preview")
-async def get_job_preview(job_id: str):
-    """Returns the blurred video frame (first frame) as a thumbnail."""
-    job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    # The blurred video is generated in Stage 2 (PREPROCESSING).
-    # If the phase is beyond PREPROCESSING, the blurred video exists.
-    video_path: Path = job.get("raw_video_path")
-    if not video_path:
-        raise HTTPException(status_code=404, detail="Video file missing")
-        
-    blurred_path = UPLOAD_DIR / f"_blurred_{video_path.name}"
-    
-    if not blurred_path.exists():
-        # Fall back to raw video if not blurred yet
-        if video_path.exists():
-            blurred_path = video_path
-        else:
-            raise HTTPException(status_code=404, detail="Preview not available yet")
-
-    # In a real app we'd extract a thumbnail using opencv here.
-    # For now, just stream the beginning of the video file as the preview.
-    # The browser `<video>` tag can render a thumbnail from a video file.
-    return FileResponse(blurred_path, media_type="video/mp4")
 
 
 @app.get("/api/v1/jobs/{job_id}/excel")
@@ -559,7 +610,6 @@ async def download_excel_report(job_id: str):
         path=excel_path,
         filename=excel_path.name,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        content_disposition_type="attachment",
     )
 
 
@@ -602,14 +652,22 @@ async def submit_human_review(job_id: str, review: ReviewSubmission):
         job["excel_path"],
         job["activity_description"],
     )
+    _save_jobs_to_disk()
 
     return {"status": "SUCCESS", "updated_row": updated_row.model_dump()}
 
 
-# ── Frontend static files (production) ────────────────────────────────────────
-# In production the React app is built into frontend/dist/ by the Dockerfile.
-# FastAPI serves it at "/", so the entire app runs from a single Railway service.
-# In local dev this is skipped (the dist dir won't exist) and Vite handles it.
-_FRONTEND_DIST = ROOT_DIR / "frontend" / "dist"
-if _FRONTEND_DIST.exists():
-    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="frontend")
+# Serve Production Frontend (if built)
+from fastapi.staticfiles import StaticFiles
+frontend_dist = ROOT_DIR / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        file_path = frontend_dist / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(frontend_dist / "index.html")

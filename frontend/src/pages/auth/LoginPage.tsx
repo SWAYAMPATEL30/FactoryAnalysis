@@ -1,10 +1,89 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, validateEmailFormat } from "../../context/AuthContext";
+import { BrandLogo, BrandTitle } from "../../components/ui/BrandLogo";
 import type { Role } from "../../types/models";
 
+const VIDEOS = [
+  "/marketing/factory1.mp4",
+  "/marketing/factory2.mp4",
+  "/marketing/factory3.mp4",
+  "/marketing/factory4.mp4",
+];
+
+function LoginVideoBackground() {
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = sessionStorage.getItem("login_video_index");
+    if (saved !== null) {
+      const idx = parseInt(saved, 10);
+      return (idx + 1) % VIDEOS.length;
+    }
+    return 0;
+  });
+
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  useEffect(() => {
+    sessionStorage.setItem("login_video_index", currentIndex.toString());
+    
+    const currentVid = videoRefs.current[currentIndex];
+    if (currentVid) {
+      currentVid.currentTime = 0;
+      currentVid.playbackRate = 0.65;
+      currentVid.play().catch(() => {});
+    }
+    
+    const nextIndex = (currentIndex + 1) % VIDEOS.length;
+    const nextVid = videoRefs.current[nextIndex];
+    if (nextVid) {
+      nextVid.preload = "auto";
+    }
+
+    const timer = setTimeout(() => {
+      setCurrentIndex((prev) => (prev + 1) % VIDEOS.length);
+    }, 25000);
+
+    return () => {
+      clearTimeout(timer);
+      if (currentVid) {
+        currentVid.pause();
+      }
+    };
+  }, [currentIndex]);
+
+  const handleEnded = () => {
+    setCurrentIndex((prev) => (prev + 1) % VIDEOS.length);
+  };
+
+  return (
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#05070c]">
+      {VIDEOS.map((src, idx) => (
+        <video
+          key={src}
+          ref={(el) => {
+             videoRefs.current[idx] = el;
+          }}
+          src={src}
+          muted
+          playsInline
+          onEnded={idx === currentIndex ? handleEnded : undefined}
+          preload={idx === currentIndex ? "auto" : "none"}
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 blur-sm scale-105"
+          style={{ opacity: idx === currentIndex ? 1 : 0 }}
+        />
+      ))}
+      <div 
+        className="absolute inset-0 pointer-events-none" 
+        style={{
+          background: "linear-gradient(to right, rgba(5,7,12,0.85) 0%, rgba(5,7,12,0.65) 30%, rgba(5,7,12,0.4) 100%)"
+        }}
+      />
+    </div>
+  );
+}
+
 export function LoginPage() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, login } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -21,13 +100,24 @@ export function LoginPage() {
   const [signUpRole, setSignUpRole] = useState<Role>("engineer");
 
   const [error, setError] = useState("");
+  const [successBanner, setSuccessBanner] = useState("");
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!signInEmail.trim() || !signInPass.trim()) {
-      setError("Please enter both email and password.");
+    setSuccessBanner("");
+    setUnconfirmedEmail("");
+
+    const emailCheck = validateEmailFormat(signInEmail);
+    if (!emailCheck.valid) {
+      setError(emailCheck.error!);
+      return;
+    }
+
+    if (!signInPass.trim()) {
+      setError("Please enter your password.");
       return;
     }
 
@@ -37,6 +127,9 @@ export function LoginPage() {
 
     if (res.error) {
       setError(res.error);
+      if (res.code === "unconfirmed") {
+        setUnconfirmedEmail(signInEmail.trim());
+      }
     } else {
       navigate("/app/dashboard");
     }
@@ -45,10 +138,20 @@ export function LoginPage() {
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!signUpEmail.trim() || !signUpPass.trim() || !signUpName.trim() || !signUpCompany.trim()) {
+    setSuccessBanner("");
+    setUnconfirmedEmail("");
+
+    if (!signUpName.trim() || !signUpCompany.trim()) {
       setError("Please fill out all required fields.");
       return;
     }
+
+    const emailCheck = validateEmailFormat(signUpEmail);
+    if (!emailCheck.valid) {
+      setError(emailCheck.error!);
+      return;
+    }
+
     if (signUpPass.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -67,9 +170,28 @@ export function LoginPage() {
     if (res.error) {
       setError(res.error);
     } else {
-      navigate("/app/dashboard");
+      setSuccessBanner(`Verification email sent to ${signUpEmail.trim()}. Check your inbox and click the link to activate your account before signing in.`);
+      setMode("signin");
+      setSignInEmail(signUpEmail.trim());
+      setSignInPass("");
     }
   }
+
+  async function handleResend() {
+    if (!unconfirmedEmail) return;
+    setLoading(true);
+    const { error: resendErr } = await resendVerificationEmail(unconfirmedEmail);
+    setLoading(false);
+    if (resendErr) {
+      setError(resendErr);
+    } else {
+      setError("");
+      setUnconfirmedEmail("");
+      setSuccessBanner(`Verification email resent to ${unconfirmedEmail}.`);
+    }
+  }
+
+
 
   async function handleGoogleOAuth() {
     setError("");
@@ -83,36 +205,32 @@ export function LoginPage() {
     }
   }
 
-  function handleDemoAccess(company: string, name: string, role: Role) {
-    login(company, name, role);
-    navigate("/app/dashboard");
+  async function handleDemoAccess(company: string, name: string, role: Role) {
+    const demoEmail = company === "BorgWarner" ? "demo@borgwarner.com" : "demo@globaltech.com";
+    const demoPass = "demo123";
+    
+    setError("");
+    setSuccessBanner("");
+    setLoading(true);
+    const res = await signInWithEmail(demoEmail, demoPass);
+    setLoading(false);
+    
+    if (res.error) {
+      setError(`Demo account login failed: ${res.error}. Please ensure demo accounts are seeded.`);
+    } else {
+      navigate("/app/dashboard");
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#070b14] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden font-body selection:bg-sky-500 selection:text-white">
-      {/* Background ambient lighting grid */}
-      <div
-        className="absolute inset-0 opacity-15 pointer-events-none"
-        style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen flex flex-col justify-center items-start px-4 md:pl-[12vw] relative overflow-hidden font-body selection:bg-sky-500 selection:text-white z-0">
+      <LoginVideoBackground />
 
       {/* Brand Header */}
-      <Link to="/" className="flex items-center gap-3 mb-6 no-underline group z-10">
-        <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-900 border border-sky-400/30 p-0.5 shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform">
-          <img
-            src="/marketing/factory_logo_mark.png"
-            alt="Factory Video Analysis"
-            className="w-full h-full object-cover rounded-lg"
-          />
-        </div>
+      <Link to="/" className="flex items-center gap-3 mb-6 no-underline group z-10 hover:opacity-80 transition-opacity">
+        <BrandLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
         <div className="flex flex-col">
-          <span className="font-body font-bold text-lg text-white tracking-tight leading-tight">
-            Factory Video Analysis
-          </span>
+          <BrandTitle className="text-xl" />
           <span className="font-mono text-[9.5px] uppercase tracking-widest text-sky-400 font-semibold leading-tight mt-0.5">
             Industrial Intelligence Platform
           </span>
@@ -120,11 +238,11 @@ export function LoginPage() {
       </Link>
 
       {/* Compact Auth Card (max-w-md ~400px width per prompt instruction) */}
-      <div className="w-full max-w-[420px] bg-[#0f172a]/95 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl z-10 relative">
+      <div className="w-full max-w-[420px] bg-[rgba(15,18,26,0.55)] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-[20px] z-10 relative">
         {/* Sign In / Sign Up Mode Switcher */}
         <div className="flex bg-[#080e1a] p-1 rounded-xl mb-6 border border-slate-800">
           <button
-            onClick={() => { setMode("signin"); setError(""); }}
+            onClick={() => { setMode("signin"); setError(""); setSuccessBanner(""); }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === "signin"
                 ? "bg-sky-500 text-white shadow-md"
@@ -134,7 +252,7 @@ export function LoginPage() {
             Sign In
           </button>
           <button
-            onClick={() => { setMode("signup"); setError(""); }}
+            onClick={() => { setMode("signup"); setError(""); setSuccessBanner(""); }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === "signup"
                 ? "bg-sky-500 text-white shadow-md"
@@ -145,15 +263,37 @@ export function LoginPage() {
           </button>
         </div>
 
+        {/* Success Alert */}
+        {successBanner && (
+          <div className="mb-5 p-3 rounded-lg bg-[#5B7A99]/20 border border-[#5B7A99]/50 text-[#5B7A99] text-xs font-medium flex items-center gap-2 leading-relaxed">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{successBanner}</span>
+          </div>
+        )}
+
         {/* Error Alert */}
         {error && (
-          <div className="mb-5 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium flex items-center gap-2">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="shrink-0">
-              <circle cx="12" cy="12" r="9" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <span>{error}</span>
+          <div className="mb-5 p-3 rounded-lg bg-[#B04A3F]/10 border border-[#B04A3F]/30 text-[#B04A3F] text-xs font-medium flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <circle cx="12" cy="12" r="9" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{error}</span>
+            </div>
+            {unconfirmedEmail && (
+              <button 
+                type="button"
+                onClick={handleResend}
+                disabled={loading}
+                className="self-start ml-6 text-sky-400 hover:text-sky-300 underline font-semibold text-[11px] cursor-pointer"
+              >
+                Resend verification email
+              </button>
+            )}
           </div>
         )}
 
@@ -252,9 +392,10 @@ export function LoginPage() {
                 required
                 value={signUpPass}
                 onChange={(e) => setSignUpPass(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder="••••••••"
                 className="w-full rounded-xl px-3 py-2 text-xs text-white bg-slate-900/90 border border-slate-700/80 placeholder:text-slate-500 focus:outline-none focus:border-sky-400 transition-all"
               />
+              <p className="text-[10px] text-slate-400 mt-1 ml-1">Must be at least 6 characters long.</p>
             </div>
 
             <div>
@@ -264,9 +405,8 @@ export function LoginPage() {
                 onChange={(e) => setSignUpRole(e.target.value as Role)}
                 className="w-full rounded-xl px-3 py-2 text-xs text-white bg-slate-900/90 border border-slate-700/80 focus:outline-none focus:border-sky-400"
               >
-                <option value="engineer">Industrial Engineer (Upload & Review)</option>
-                <option value="manager">Plant Manager (Full Access)</option>
-                <option value="viewer">Executive Viewer (Read-only)</option>
+                <option value="manager">Manager</option>
+                <option value="engineer">Employee</option>
               </select>
             </div>
 
@@ -275,7 +415,7 @@ export function LoginPage() {
               disabled={loading}
               className="w-full mt-1 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-semibold text-white text-xs shadow-lg shadow-sky-500/25 hover:from-sky-400 transition-all cursor-pointer disabled:opacity-50"
             >
-              {loading ? "Creating Supabase Account…" : "Register & Start Study →"}
+              {loading ? "Creating Account…" : "Register"}
             </button>
           </form>
         )}

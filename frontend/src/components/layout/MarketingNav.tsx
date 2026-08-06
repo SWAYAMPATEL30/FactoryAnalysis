@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { BrandLogo, BrandTitle } from "../ui/BrandLogo";
 
 const LINKS = [
   { to: "/how-it-works", label: "How It Works" },
@@ -17,15 +18,9 @@ export function MarketingNav() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-accent flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.9" />
-            </svg>
-          </div>
-          <span className="font-display font-bold text-lg uppercase tracking-wide text-white">
-            FactoryAnalysis
-          </span>
+        <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <BrandLogo className="w-8 h-8" />
+          <BrandTitle className="text-xl" />
         </Link>
 
         {/* Desktop nav */}

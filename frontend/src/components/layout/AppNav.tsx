@@ -1,5 +1,6 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { BrandLogo } from "../ui/BrandLogo";
 
 const NAV_ITEMS = [
   {
@@ -31,16 +32,13 @@ const NAV_ITEMS = [
 // ── Logo mark (shared) ────────────────────────────────────────────────────────
 function LogoMark() {
   return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-7 h-7 rounded bg-accent flex items-center justify-center shrink-0">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.9" />
-        </svg>
-      </div>
-      <span className="font-display font-bold text-base uppercase tracking-wide text-white leading-none">
-        Factory<br />Analysis
+    <Link to="/" className="flex items-center gap-2.5 no-underline hover:opacity-80 transition-opacity">
+      <BrandLogo className="w-8 h-8" />
+      <span className="font-display font-bold text-base uppercase tracking-wide leading-none">
+        <span className="text-white">FACTORY</span><br />
+        <span className="text-[#4fd1c5]">ANALYSIS</span>
       </span>
-    </div>
+    </Link>
   );
 }
 
