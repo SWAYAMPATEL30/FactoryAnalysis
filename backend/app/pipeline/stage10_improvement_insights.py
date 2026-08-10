@@ -37,18 +37,55 @@ logger = logging.getLogger(__name__)
 TMU_TO_SEC = 0.036
 
 
+def _evaluate_equipment_suitability(row: MostRow) -> float:
+    """Evaluates whether an activity actually benefits from an equipment upgrade.
+    Returns 0.0 for pure manual steps (inspections, hand placements) where tool
+    replacement is unnatural, prioritizing motions with real tool/fixture upgrade potential."""
+    desc = (row.elemental_description or "").upper()
+    details = (row.activity_movement_details or "").upper()
+    text = f"{desc} {details}"
+    card = row.data_card
+
+    base_score = 0.0
+    if card == "T" or any(k in text for k in ["SCREW", "TORQUE", "WRENCH", "FASTEN", "BOLT", "NUT", "RATCHET"]):
+        base_score = 50.0
+    elif any(k in text for k in ["GLUE", "DISPENS", "SEALANT", "ADHESIVE", "PASTE"]):
+        base_score = 48.0
+    elif any(k in text for k in ["PRESS", "STAMP", "ACTUATE", "PUNCH", "CRIMP"]):
+        base_score = 45.0
+    elif card == "C" or any(k in text for k in ["CLAMP", "FIXTURE", "VICE", "HOLD", "JIG"]):
+        base_score = 40.0
+    elif any(k in text for k in ["HEAVY", "CRATE", "HOIST", "LIFT", "PALLET"]):
+        base_score = 35.0
+    else:
+        # Pure manual steps (hand placement, visual check) get 0 score -- not forced into equipment upgrades
+        return 0.0
+
+    # Weight by duration so longer suitable motions get priority
+    return base_score + min(40.0, row.tmu * 0.4)
+
+
 def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str]:
     """Performs a real live web search for equipment upgrades to ground recommendations
     in real industrial tool categories, avoiding API model calls or unverified guesses."""
-    query_topic = "factory assembly industrial equipment upgrade"
-    if "GLUE" in mov_details.upper() or "DISPENSER" in mov_details.upper():
+    text = f"{activity_desc} {mov_details}".upper()
+
+    if "GLUE" in text or "DISPENS" in text or "SEALANT" in text:
         query_topic = "industrial automatic precision adhesive dispenser factory assembly"
         current_tool = "Manual adhesive dispenser"
         default_upgrade = "Pneumatic Auto-Feed Dispensing System"
-    elif "TORQUE" in mov_details.upper() or "SCREW" in mov_details.upper() or card == "T":
+    elif "TORQUE" in text or "SCREW" in text or "BOLT" in text or "FASTEN" in text or card == "T":
         query_topic = "electric torque screwdriver automatic shutoff assembly line"
         current_tool = "Standard manual / click torque wrench"
-        default_upgrade = "Electric Preset Torque Driver with Auto-Stop"
+        default_upgrade = "Electric Preset Torque Driver with Auto-Stop & Error Proofing"
+    elif "PRESS" in text or "STAMP" in text or "CRIMP" in text:
+        query_topic = "pneumatic benchtop assembly press safety light curtain"
+        current_tool = "Manual arbor press / lever"
+        default_upgrade = "Pneumatic Precision Benchtop Press with Light Curtain"
+    elif "HOIST" in text or "LIFT" in text or "HEAVY" in text:
+        query_topic = "zero gravity pneumatic manipulator arm factory assembly"
+        current_tool = "Manual heavy lifting / manual hoist"
+        default_upgrade = "Zero-Gravity Pneumatic Load Balancer Manipulator"
     else:
         query_topic = "quick toggle ergonomic pneumatic clamping fixture assembly line"
         current_tool = "Manual part placement & clamping"
@@ -122,12 +159,11 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
     equipment_upgrades: List[EquipmentUpgradeSuggestion] = []
     saved_sec_total = 0.0
 
+    # 1. Elimination candidates (NVA / SVA waste)
     for r in sorted_rows:
         r_sec = r.tmu * TMU_TO_SEC
         card = r.data_card
-        mov_details = r.activity_movement_details or ""
 
-        # Flag NVA / SVA activities as elimination candidates
         if (r.nva_sec > 0 or r.nvan_sec > 0 or r.sva_sec > 0) and r.s_no != top.s_no and len(elimination_candidates) < 3:
             waste_type = "Excessive Reach / Travel" if card == "G" else ("Tool Handling Overhead" if card == "T" else "Redundant Repositioning")
             potential_saving = round(r_sec * 0.4, 2)  # conservative 40% reduction
@@ -143,8 +179,17 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
             )
             saved_sec_total += potential_saving
 
-        # Equipment upgrade suggestions derived from live Web Search grounding
-        if (card in ("T", "C") or "TOOL" in mov_details.upper() or r.s_no == top.s_no) and len(equipment_upgrades) < 2:
+    # 2. Smart Equipment Upgrade Selection (Ranked by Equipment Suitability, NOT blindly row #1)
+    suitability_ranked = sorted(rows, key=lambda r: _evaluate_equipment_suitability(r), reverse=True)
+    for r in suitability_ranked:
+        score = _evaluate_equipment_suitability(r)
+        if score <= 0.0:
+            continue  # Skip pure manual motions that don't benefit from equipment replacement
+
+        if len(equipment_upgrades) < 2:
+            r_sec = r.tmu * TMU_TO_SEC
+            mov_details = r.activity_movement_details or ""
+            card = r.data_card
             current_tool, upgrade_suggestion, search_url = _web_search_equipment_upgrade(
                 r.elemental_description or "", mov_details, card
             )
