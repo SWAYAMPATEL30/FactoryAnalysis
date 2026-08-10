@@ -81,3 +81,55 @@ export function bucketFor(row: MostRow): TaxonomyBucket {
   if (row.nva_sec > 0) return "NVA";
   return "Noise";
 }
+
+export interface BottleneckIdentification {
+  activity_name: string;
+  s_no: number;
+  time_sec: number;
+  tmu: number;
+  pct_of_cycle: number;
+  reason: string;
+}
+
+export interface EliminationCandidate {
+  s_no: number;
+  activity_name: string;
+  current_time_sec: number;
+  waste_type: string;
+  reason: string;
+  potential_saving_sec: number;
+}
+
+export interface EquipmentUpgradeSuggestion {
+  s_no: number;
+  activity_name: string;
+  current_tool_or_method: string;
+  suggested_upgrade: string;
+  projected_time_sec: number;
+  time_saved_sec: number;
+  disclaimer: string;
+}
+
+export interface ProjectedCycleTimeSummary {
+  current_cycle_sec: number;
+  current_tmu: number;
+  projected_cycle_sec: number;
+  projected_tmu: number;
+  total_saving_sec: number;
+  pct_reduction: number;
+  current_va_sec: number;
+  projected_va_sec: number;
+  current_nva_sec: number;
+  projected_nva_sec: number;
+  disclaimer: string;
+}
+
+export interface ImprovementInsights {
+  job_id: string;
+  bottleneck: BottleneckIdentification;
+  elimination_candidates: EliminationCandidate[];
+  equipment_upgrades: EquipmentUpgradeSuggestion[];
+  projected_summary: ProjectedCycleTimeSummary;
+  historical_trend_note?: string | null;
+  generated_at: number;
+}
