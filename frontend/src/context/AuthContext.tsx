@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import type { Company, Role, User } from "../types/models";
 
 const DEMO_COMPANIES: Company[] = [
-  { id: "borgwarner", name: "BorgWarner", plan: "growth" },
-  { id: "globaltech", name: "Global Tech", plan: "starter" },
+  { id: "abc-corp", name: "ABC Corp", plan: "growth" },
+  { id: "xyz-ind", name: "XYZ Industries", plan: "starter" },
 ];
 
 interface AuthState {

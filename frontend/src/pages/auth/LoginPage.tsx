@@ -4,8 +4,8 @@ import { useAuth } from "../../context/AuthContext";
 import type { Role } from "../../types/models";
 
 const DEMO_COMPANIES = [
-  { name: "BorgWarner", description: "3 workstations · Growth plan" },
-  { name: "Global Tech", description: "2 workstations · Starter plan" },
+  { name: "ABC Corp", description: "3 workstations · Growth plan" },
+  { name: "XYZ Industries", description: "2 workstations · Starter plan" },
 ];
 
 export function LoginPage() {
@@ -63,7 +63,7 @@ export function LoginPage() {
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. BorgWarner"
+              placeholder="e.g. ABC Corp"
               className="w-full rounded-md border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             />
           </div>
