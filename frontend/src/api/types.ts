@@ -107,6 +107,7 @@ export interface EquipmentUpgradeSuggestion {
   suggested_upgrade: string;
   projected_time_sec: number;
   time_saved_sec: number;
+  search_url?: string | null;
   disclaimer: string;
 }
 

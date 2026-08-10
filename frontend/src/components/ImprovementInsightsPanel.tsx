@@ -231,6 +231,18 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
                       <span className="font-medium text-purple-700">Suggested Upgrade: </span>
                       <span className="font-semibold text-ink">{eq.suggested_upgrade}</span>
                     </div>
+                    {eq.search_url && (
+                      <div className="pt-1">
+                        <a
+                          href={eq.search_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded bg-purple-100 hover:bg-purple-200 px-2 py-1 text-[10.5px] font-semibold text-purple-800 transition-colors shadow-xs"
+                        >
+                          <span>🔍 Verify Product Specs & Vendors ↗</span>
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3 pt-2 border-t border-purple-500/10 flex items-center justify-between text-[11px] font-mono">

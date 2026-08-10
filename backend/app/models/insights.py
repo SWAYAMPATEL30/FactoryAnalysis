@@ -38,6 +38,10 @@ class EquipmentUpgradeSuggestion(BaseModel):
     )
     projected_time_sec: float = Field(description="Estimated new time for this motion in seconds if adopted")
     time_saved_sec: float = Field(description="Estimated seconds saved per cycle")
+    search_url: str | None = Field(
+        default=None,
+        description="Direct web search URL to verify commercial product models, pricing, and specs from industrial suppliers"
+    )
     disclaimer: str = Field(
         default="Suggested — verify before purchasing",
         description="Mandatory guardrail label indicating AI suggestion requiring engineer verification"

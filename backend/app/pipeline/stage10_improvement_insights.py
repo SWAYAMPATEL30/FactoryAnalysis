@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 TMU_TO_SEC = 0.036
 
 
-def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str]:
+def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str]:
     """Performs a real live web search for equipment upgrades to ground recommendations
     in real industrial tool categories, avoiding API model calls or unverified guesses."""
     query_topic = "factory assembly industrial equipment upgrade"
@@ -54,6 +54,9 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         current_tool = "Manual part placement & clamping"
         default_upgrade = "Quick-Toggle Ergonomic Pneumatic Fixture"
 
+    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query_topic)}"
+    upgrade = default_upgrade
+
     # Perform live web search query to ground tool category
     try:
         url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query_topic)}&format=json"
@@ -63,15 +66,12 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         search_hits = data.get("query", {}).get("search", [])
         if search_hits:
             top_hit = search_hits[0].get("title", "")
-            snippet = search_hits[0].get("snippet", "")
-            snippet_clean = re.sub(r'<[^>]+>', '', snippet)
             if top_hit and len(top_hit) > 3:
                 upgrade = f"{default_upgrade} ({top_hit} Category)"
-                return current_tool, upgrade
     except Exception as e:
         logger.debug("Web search query failed, using grounded equipment standard: %s", e)
 
-    return current_tool, default_upgrade
+    return current_tool, upgrade, search_url
 
 
 def _get_insights_cache_path(upload_dir: Path, job_id: str) -> Path:
@@ -145,7 +145,7 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
 
         # Equipment upgrade suggestions derived from live Web Search grounding
         if (card in ("T", "C") or "TOOL" in mov_details.upper() or r.s_no == top.s_no) and len(equipment_upgrades) < 2:
-            current_tool, upgrade_suggestion = _web_search_equipment_upgrade(
+            current_tool, upgrade_suggestion, search_url = _web_search_equipment_upgrade(
                 r.elemental_description or "", mov_details, card
             )
             saving = round(r_sec * 0.35, 2)
@@ -158,6 +158,7 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
                     suggested_upgrade=upgrade_suggestion,
                     projected_time_sec=projected_new,
                     time_saved_sec=saving,
+                    search_url=search_url,
                     disclaimer="Suggested — verify before purchasing",
                 )
             )

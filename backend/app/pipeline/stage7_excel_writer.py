@@ -383,14 +383,14 @@ def _write_insights_tab(wb, insights) -> None:
 
     # Section C: Equipment & Method Upgrades
     row_cursor += 1
-    ws.merge_cells(f"A{row_cursor}:F{row_cursor}")
+    ws.merge_cells(f"A{row_cursor}:G{row_cursor}")
     sec_c = ws[f"A{row_cursor}"]
     sec_c.value = "C. EQUIPMENT & METHOD UPGRADE SUGGESTIONS"
     sec_c.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
     sec_c.fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
     row_cursor += 1
 
-    headers_c = ["#", "Activity Description", "Current Method / Tool", "Suggested Upgrade", "Projected Time (s)", "Disclaimer"]
+    headers_c = ["#", "Activity Description", "Current Method / Tool", "Suggested Upgrade", "Projected Time (s)", "Disclaimer", "Web Search Verification"]
     for c_idx, h in enumerate(headers_c, 1):
         cell = ws.cell(row=row_cursor, column=c_idx, value=h)
         cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
@@ -407,11 +407,19 @@ def _write_insights_tab(wb, insights) -> None:
         disc_cell = ws.cell(row=row_cursor, column=6, value=eq.disclaimer)
         disc_cell.border = thin
         disc_cell.font = Font(name="Calibri", size=9, italic=True, color="C8452C")
+
+        link_cell = ws.cell(row=row_cursor, column=7)
+        link_cell.border = thin
+        if getattr(eq, "search_url", None):
+            link_cell.value = f'=HYPERLINK("{eq.search_url}", "🔍 Search Product Specs")'
+            link_cell.font = Font(name="Calibri", size=9, color="0000FF", underline="single")
+        else:
+            link_cell.value = "N/A"
         row_cursor += 1
 
     # Section D: Summary
     row_cursor += 1
-    ws.merge_cells(f"A{row_cursor}:F{row_cursor}")
+    ws.merge_cells(f"A{row_cursor}:G{row_cursor}")
     sec_d = ws[f"A{row_cursor}"]
     sec_d.value = "D. PROJECTED NEW CYCLE TIME SUMMARY"
     sec_d.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
@@ -440,6 +448,7 @@ def _write_insights_tab(wb, insights) -> None:
     ws.column_dimensions["D"].width = 35
     ws.column_dimensions["E"].width = 18
     ws.column_dimensions["F"].width = 30
+    ws.column_dimensions["G"].width = 28
 
 
 def write_most_analysis_workbook(
