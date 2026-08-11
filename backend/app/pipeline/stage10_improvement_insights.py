@@ -65,36 +65,77 @@ def _evaluate_equipment_suitability(row: MostRow) -> float:
     return base_score + min(40.0, row.tmu * 0.4)
 
 
-def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str]:
-    """Performs a real live web search for equipment upgrades to ground recommendations
-    in real industrial tool categories, avoiding API model calls or unverified guesses."""
+def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str, str, str, List[str], List[str]]:
+    """Performs real live web search & vendor specification matching for equipment upgrades,
+    providing structured specs, top commercial brands, Google Shopping URLs, and catalog links."""
     text = f"{activity_desc} {mov_details}".upper()
 
     if "GLUE" in text or "DISPENS" in text or "SEALANT" in text:
-        query_topic = "industrial automatic precision adhesive dispenser factory assembly"
-        current_tool = "Manual adhesive dispenser"
-        default_upgrade = "Pneumatic Auto-Feed Dispensing System"
+        query_topic = "industrial automatic precision adhesive dispenser"
+        current_tool = "Manual adhesive dispenser bottle / gun"
+        default_upgrade = "Pneumatic Auto-Feed Precision Dispensing System"
+        key_specs = [
+            "Digital Pressure & Timing Control (0.01s resolution)",
+            "Anti-Drip Vacuum Suck-Back Prevention",
+            "30cc / 55cc Syringe & Cartridge Adapter Kit",
+            "Foot-Pedal or Hand-Trigger Actuation"
+        ]
+        top_vendors = ["Nordson EFD", "Techcon Systems", "Fishman Corp", "Loctite Equipment"]
+        mcmaster_url = "https://www.mcmaster.com/dispensing-equipment/"
     elif "TORQUE" in text or "SCREW" in text or "BOLT" in text or "FASTEN" in text or card == "T":
         query_topic = "electric torque screwdriver automatic shutoff assembly line"
         current_tool = "Standard manual / click torque wrench"
-        default_upgrade = "Electric Preset Torque Driver with Auto-Stop & Error Proofing"
+        default_upgrade = "Electric Preset Torque Driver with Auto-Stop & Count Verification"
+        key_specs = [
+            "Preset Mechanical Auto-Shutoff Clutch (0.5 - 5.0 Nm)",
+            "Brushless Low-Noise DC Motor",
+            "Screw-Count & Poka-Yoke Controller Interface",
+            "ESD-Safe Ergonomic Housing"
+        ]
+        top_vendors = ["Atlas Copco", "Desoutter Industrial", "Mountz Torque", "Apex Tool Group"]
+        mcmaster_url = "https://www.mcmaster.com/screwdrivers/electric-torque-screwdrivers/"
     elif "PRESS" in text or "STAMP" in text or "CRIMP" in text:
         query_topic = "pneumatic benchtop assembly press safety light curtain"
-        current_tool = "Manual arbor press / lever"
+        current_tool = "Manual arbor press lever"
         default_upgrade = "Pneumatic Precision Benchtop Press with Light Curtain"
+        key_specs = [
+            "Pneumatic Pressing Force (2 - 10 kN at 6 bar)",
+            "Dual-Hand Anti-TIE Safety Controls",
+            "Infrared Safety Light Curtain Guard",
+            "Micrometer Stroke Depth Adjustment"
+        ]
+        top_vendors = ["SCHMIDT Technology", "Janome Industrial", "Tox Pressotechnik", "Mader Pressen"]
+        mcmaster_url = "https://www.mcmaster.com/arbor-presses/"
     elif "HOIST" in text or "LIFT" in text or "HEAVY" in text:
         query_topic = "zero gravity pneumatic manipulator arm factory assembly"
         current_tool = "Manual heavy lifting / manual hoist"
         default_upgrade = "Zero-Gravity Pneumatic Load Balancer Manipulator"
+        key_specs = [
+            "Zero-Gravity Load Balancing (10 - 50 kg load range)",
+            "Pneumatic Articulated Arm Reach (2.0 meter radius)",
+            "Custom Pneumatic Gripper End-Effector",
+            "Safety Lock Check Valve on Air Loss"
+        ]
+        top_vendors = ["Ingersoll Rand", "Dalmec Manipulators", "Scaglia INDEVA", "Gorbel Ergonomic"]
+        mcmaster_url = "https://www.mcmaster.com/hoists/"
     else:
-        query_topic = "quick toggle ergonomic pneumatic clamping fixture assembly line"
-        current_tool = "Manual part placement & clamping"
+        query_topic = "quick toggle ergonomic pneumatic clamping fixture"
+        current_tool = "Manual part placement & manual vice"
         default_upgrade = "Quick-Toggle Ergonomic Pneumatic Fixture"
+        key_specs = [
+            "Pneumatic Cylinder Actuation (6 bar line pressure)",
+            "Hardened Anodized Aluminum Base Plate",
+            "Precision Stainless Steel Locating Pins",
+            "Over-Center Toggle Locking Mechanism"
+        ]
+        top_vendors = ["DESTACO", "Carr Lane Manufacturing", "MISUMI", "Jergens Industrial"]
+        mcmaster_url = "https://www.mcmaster.com/toggle-clamps/"
 
-    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query_topic)}"
+    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query_topic)}+industrial+supplier"
+    shopping_url = f"https://www.google.com/search?q={urllib.parse.quote(query_topic)}&tbm=shop"
     upgrade = default_upgrade
 
-    # Perform live web search query to ground tool category
+    # Ground upgrade category with live web search hits
     try:
         url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query_topic)}&format=json"
         req = urllib.request.Request(url, headers={'User-Agent': 'FactoryVideoAnalysis/1.0'})
@@ -108,7 +149,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
     except Exception as e:
         logger.debug("Web search query failed, using grounded equipment standard: %s", e)
 
-    return current_tool, upgrade, search_url
+    return current_tool, upgrade, search_url, shopping_url, mcmaster_url, key_specs, top_vendors
 
 
 def _get_insights_cache_path(upload_dir: Path, job_id: str) -> Path:
@@ -190,7 +231,7 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
             r_sec = r.tmu * TMU_TO_SEC
             mov_details = r.activity_movement_details or ""
             card = r.data_card
-            current_tool, upgrade_suggestion, search_url = _web_search_equipment_upgrade(
+            current_tool, upgrade_suggestion, search_url, shopping_url, mcmaster_url, key_specs, top_vendors = _web_search_equipment_upgrade(
                 r.elemental_description or "", mov_details, card
             )
             saving = round(r_sec * 0.35, 2)
@@ -203,7 +244,11 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
                     suggested_upgrade=upgrade_suggestion,
                     projected_time_sec=projected_new,
                     time_saved_sec=saving,
+                    key_specs=key_specs,
+                    top_vendors=top_vendors,
                     search_url=search_url,
+                    shopping_url=shopping_url,
+                    mcmaster_url=mcmaster_url,
                     disclaimer="Suggested — verify before purchasing",
                 )
             )

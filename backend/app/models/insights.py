@@ -38,9 +38,25 @@ class EquipmentUpgradeSuggestion(BaseModel):
     )
     projected_time_sec: float = Field(description="Estimated new time for this motion in seconds if adopted")
     time_saved_sec: float = Field(description="Estimated seconds saved per cycle")
+    key_specs: List[str] = Field(
+        default_factory=list,
+        description="Core technical specifications required when sourcing this equipment"
+    )
+    top_vendors: List[str] = Field(
+        default_factory=list,
+        description="Leading industrial manufacturers/suppliers providing this tool category"
+    )
     search_url: str | None = Field(
         default=None,
         description="Direct web search URL to verify commercial product models, pricing, and specs from industrial suppliers"
+    )
+    shopping_url: str | None = Field(
+        default=None,
+        description="Direct Google Shopping products search URL for commercial pricing and models"
+    )
+    mcmaster_url: str | None = Field(
+        default=None,
+        description="Industrial catalog search URL (e.g. McMaster-Carr / ThomasNet)"
     )
     disclaimer: str = Field(
         default="Suggested — verify before purchasing",

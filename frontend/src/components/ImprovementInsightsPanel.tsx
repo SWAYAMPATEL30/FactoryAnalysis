@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ImprovementInsights } from "../api/types";
+import type { ImprovementInsights, EquipmentUpgradeSuggestion } from "../api/types";
 import { getJobInsights, generateJobInsights } from "../api/client";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 export function ImprovementInsightsPanel({ jobId }: Props) {
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"before_after" | "side_by_side">("before_after");
+  const [selectedUpgrade, setSelectedUpgrade] = useState<EquipmentUpgradeSuggestion | null>(null);
 
   // Query cached insights
   const { data: insightsData, isLoading, isError } = useQuery({
@@ -231,18 +232,25 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
                       <span className="font-medium text-purple-700">Suggested Upgrade: </span>
                       <span className="font-semibold text-ink">{eq.suggested_upgrade}</span>
                     </div>
-                    {eq.search_url && (
-                      <div className="pt-1">
-                        <a
-                          href={eq.search_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded bg-purple-100 hover:bg-purple-200 px-2 py-1 text-[10.5px] font-semibold text-purple-800 transition-colors shadow-xs"
-                        >
-                          <span>🔍 Verify Product Specs & Vendors ↗</span>
-                        </a>
+                    {eq.top_vendors && eq.top_vendors.length > 0 && (
+                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                        <span className="text-[10px] text-ink-faint font-medium">Top Brands:</span>
+                        {eq.top_vendors.slice(0, 3).map((v, vIdx) => (
+                          <span key={vIdx} className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                            {v}
+                          </span>
+                        ))}
                       </div>
                     )}
+                    <div className="pt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUpgrade(eq)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-purple-600 hover:bg-purple-700 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors shadow-xs cursor-pointer"
+                      >
+                        <span>🏭 Verify Product Specs & Supplier Catalogs ↗</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="mt-3 pt-2 border-t border-purple-500/10 flex items-center justify-between text-[11px] font-mono">
@@ -370,6 +378,118 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
           )}
         </div>
       </div>
+
+      {/* Industrial Product Verification & Vendor Specs Modal */}
+      {selectedUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="relative w-full max-w-xl rounded-2xl border border-purple-500/30 bg-raised p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-line pb-4">
+              <div>
+                <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-800 uppercase tracking-wider">
+                  Industrial Tool Specification & Verification
+                </span>
+                <h3 className="font-display text-lg font-bold text-ink mt-1">
+                  {selectedUpgrade.suggested_upgrade}
+                </h3>
+                <p className="text-xs text-ink-faint">
+                  Target Activity #{selectedUpgrade.s_no}: <span className="text-ink font-medium">{selectedUpgrade.activity_name}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUpgrade(null)}
+                className="rounded-lg p-1.5 text-ink-faint hover:bg-raised-2 hover:text-ink transition-colors cursor-pointer text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Observed Method vs Target Savings */}
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-purple-500/10 bg-purple-500/5 p-3.5 text-xs font-mono">
+              <div>
+                <span className="text-ink-faint block text-[10px] uppercase font-bold">Observed Method</span>
+                <span className="text-ink font-semibold text-xs">{selectedUpgrade.current_tool_or_method}</span>
+              </div>
+              <div>
+                <span className="text-purple-700 block text-[10px] uppercase font-bold">Targeted Time Saving</span>
+                <span className="text-purple-800 font-extrabold text-xs">
+                  -{selectedUpgrade.time_saved_sec.toFixed(1)}s per cycle (New: {selectedUpgrade.projected_time_sec.toFixed(1)}s)
+                </span>
+              </div>
+            </div>
+
+            {/* Core Required Specifications */}
+            {selectedUpgrade.key_specs && selectedUpgrade.key_specs.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-xs text-ink uppercase tracking-wider mb-2">
+                  ⚙️ Key Required Technical Specifications:
+                </h4>
+                <ul className="space-y-1.5 text-xs text-ink-dim">
+                  {selectedUpgrade.key_specs.map((spec, sIdx) => (
+                    <li key={sIdx} className="flex items-start gap-2">
+                      <span className="text-emerald-500 font-bold">✓</span>
+                      <span>{spec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Leading Manufacturers */}
+            {selectedUpgrade.top_vendors && selectedUpgrade.top_vendors.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-xs text-ink uppercase tracking-wider mb-2">
+                  🏭 Top Industrial Brands & Suppliers:
+                </h4>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selectedUpgrade.top_vendors.map((v, vIdx) => (
+                    <span key={vIdx} className="rounded-lg border border-purple-300 bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-900 shadow-2xs">
+                      {v}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Disclaimer */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-800 italic font-mono">
+              ⚠️ {selectedUpgrade.disclaimer}. Verification of torque rating, pneumatic pressure, and ergonomics required by station process engineer.
+            </div>
+
+            {/* 3 Commercial Action Buttons */}
+            <div className="pt-2 border-t border-line flex flex-col sm:flex-row items-center gap-2 justify-end">
+              {selectedUpgrade.shopping_url && (
+                <a
+                  href={selectedUpgrade.shopping_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 px-4 py-2 text-xs font-bold text-white transition-colors shadow-sm"
+                >
+                  <span>🛒 View Commercial Pricing on Google Shopping ↗</span>
+                </a>
+              )}
+              {selectedUpgrade.mcmaster_url && (
+                <a
+                  href={selectedUpgrade.mcmaster_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-raised hover:bg-raised-2 px-4 py-2 text-xs font-semibold text-ink transition-colors"
+                >
+                  <span>🏭 McMaster-Carr Catalog ↗</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedUpgrade(null)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-semibold text-ink-faint hover:text-ink transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

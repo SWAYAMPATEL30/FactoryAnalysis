@@ -107,7 +107,11 @@ export interface EquipmentUpgradeSuggestion {
   suggested_upgrade: string;
   projected_time_sec: number;
   time_saved_sec: number;
+  key_specs?: string[];
+  top_vendors?: string[];
   search_url?: string | null;
+  shopping_url?: string | null;
+  mcmaster_url?: string | null;
   disclaimer: string;
 }
 
