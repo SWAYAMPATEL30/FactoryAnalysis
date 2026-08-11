@@ -92,23 +92,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         default_upgrade = "Quick-Toggle Ergonomic Pneumatic Fixture"
 
     search_url = f"https://www.google.com/search?q={urllib.parse.quote(query_topic)}"
-    upgrade = default_upgrade
-
-    # Perform live web search query to ground tool category
-    try:
-        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(query_topic)}&format=json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'FactoryVideoAnalysis/1.0'})
-        res = urllib.request.urlopen(req, timeout=3)
-        data = json.loads(res.read().decode('utf-8'))
-        search_hits = data.get("query", {}).get("search", [])
-        if search_hits:
-            top_hit = search_hits[0].get("title", "")
-            if top_hit and len(top_hit) > 3:
-                upgrade = f"{default_upgrade} ({top_hit} Category)"
-    except Exception as e:
-        logger.debug("Web search query failed, using grounded equipment standard: %s", e)
-
-    return current_tool, upgrade, search_url
+    return current_tool, default_upgrade, search_url
 
 
 def _get_insights_cache_path(upload_dir: Path, job_id: str) -> Path:
@@ -167,13 +151,47 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
         if (r.nva_sec > 0 or r.nvan_sec > 0 or r.sva_sec > 0) and r.s_no != top.s_no and len(elimination_candidates) < 3:
             waste_type = "Excessive Reach / Travel" if card == "G" else ("Tool Handling Overhead" if card == "T" else "Redundant Repositioning")
             potential_saving = round(r_sec * 0.4, 2)  # conservative 40% reduction
+            
+            act_name = r.elemental_description or f"Activity #{r.s_no}"
+            act_name_clean = act_name.strip(".")
+            desc_lower = act_name.lower()
+
+            # Smart domain-aware action classifier
+            if any(k in desc_lower for k in ["robot", "manipulator", "end-effector", "arm"]):
+                if any(k in desc_lower for k in ["grip", "align", "rotate", "orient"]):
+                    action = f"Calibrate end-effector pneumatic gripper stroke & optical alignment sensors for '{act_name_clean}'."
+                elif any(k in desc_lower for k in ["lower", "seat", "press", "insert"]):
+                    action = f"Adjust robotic Z-axis acceleration curves & guide pins for '{act_name_clean}'."
+                else:
+                    action = f"Optimize robotic end-effector path trajectory & servo speed profile for '{act_name_clean}'."
+            elif any(k in desc_lower for k in ["press", "stamp", "crimp", "actuate"]):
+                action = f"Install pneumatic benchtop press with dual safety light curtains for '{act_name_clean}'."
+            elif any(k in desc_lower for k in ["screw", "bolt", "torque", "wrench", "fasten"]):
+                action = f"Mount electric preset torque driver with auto-stop on overhead balancer for '{act_name_clean}'."
+            elif any(k in desc_lower for k in ["glue", "dispens", "sealant", "paste"]):
+                action = f"Upgrade to automated pulse-feed precision adhesive dispenser for '{act_name_clean}'."
+            elif any(k in desc_lower for k in ["bin", "reach", "grab", "fetch"]):
+                action = f"Relocate parts bin for '{act_name_clean}' into primary 25cm operator reach zone to cut travel time."
+            elif any(k in desc_lower for k in ["position", "align", "orient", "adjust"]):
+                action = f"Install magnetic part guide rail / mechanical locator pins to align '{act_name_clean}' instantly."
+            else:
+                action = f"Optimize workstation fixture layout for '{act_name_clean}' to eliminate redundant handling."
+
+            if "robot" in desc_lower or "manipulator" in desc_lower or "arm" in desc_lower:
+                reason = f"Categorized as non-value-add ({r.category}). Robotic travel & positioning motion can be optimized via path planning and servo curve tuning."
+            elif card == "T":
+                reason = f"Categorized as non-value-add ({r.category}). Tool pickup and repositioning overhead can be reduced with suspended balancing equipment."
+            else:
+                reason = f"Categorized as non-value-add ({r.category}). Motion involves non-value-add reach or re-orientation that can be streamlined via layout fixtures."
+
             elimination_candidates.append(
                 EliminationCandidate(
                     s_no=r.s_no,
-                    activity_name=r.elemental_description or f"Activity {r.s_no}",
+                    activity_name=act_name,
                     current_time_sec=round(r_sec, 2),
                     waste_type=waste_type,
-                    reason=f"Categorized as non-value-add ({r.category}). Repositioning parts/bins closer to workstation center eliminates excess travel.",
+                    reason=reason,
+                    recommended_action=action,
                     potential_saving_sec=potential_saving,
                 )
             )

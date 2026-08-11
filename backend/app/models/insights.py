@@ -26,6 +26,10 @@ class EliminationCandidate(BaseModel):
     current_time_sec: float = Field(description="Time cost of this motion in seconds")
     waste_type: str = Field(description="Lean waste category: e.g., 'Excessive Reach / Travel', 'Redundant Repositioning', 'Waiting / Idle'")
     reason: str = Field(description="Concrete, data-grounded reason explaining why this motion is reducible or eliminable")
+    recommended_action: str = Field(
+        default="Reposition part bins to primary 30cm work zone to reduce reach distance.",
+        description="Specific alternative layout, tool, or method action to take instead of this non-value-add motion"
+    )
     potential_saving_sec: float = Field(description="Estimated time saving in seconds if eliminated/reduced")
 
 
