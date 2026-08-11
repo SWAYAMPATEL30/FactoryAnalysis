@@ -112,7 +112,7 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
         </AnimatePresence>
         {rows.length === 0 && (
           <div className="px-4 py-10 text-center text-sm text-ink-faint">
-            {generating ? "Waiting for the first motions to be found…" : "No rows yet."}
+            {generating ? "Video analysis in progress. Please wait for the pipeline to finish processing to view motion segments." : "No rows yet."}
           </div>
         )}
       </div>

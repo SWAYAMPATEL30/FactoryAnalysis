@@ -53,7 +53,7 @@ export function ReviewConsole() {
   const rowsQuery = useQuery({
     queryKey: ["rows", jobId],
     queryFn: () => getJobRows(jobId!),
-    enabled: !!jobId,
+    enabled: !!jobId && isDone,
     refetchInterval: isDone ? false : 2000,
     refetchIntervalInBackground: true,
   });
@@ -64,7 +64,13 @@ export function ReviewConsole() {
     enabled: !!jobId && isDone,
   });
 
-  const rows = useMemo(() => rowsQuery.data ?? [], [rowsQuery.data]);
+  const rows = useMemo(() => (isDone ? rowsQuery.data ?? [] : []), [isDone, rowsQuery.data]);
+
+  useEffect(() => {
+    if (isDone && videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [isDone]);
 
   useEffect(() => {
     const el = videoRef.current;

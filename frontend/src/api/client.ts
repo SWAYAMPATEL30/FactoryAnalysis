@@ -99,13 +99,13 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
   } catch (err) {
     return {
       job_id: jobId,
-      status: "COMPLETED",
-      phase: "COMPLETED",
-      row_count: 10,
-      flag_count: 1,
+      status: "PROCESSING",
+      phase: "PREPROCESSING",
+      row_count: 0,
+      flag_count: 0,
       error: null,
-      elapsed_sec: 4.8,
-      estimated_manual_sec: 180,
+      elapsed_sec: null,
+      estimated_manual_sec: null,
     };
   }
 }
@@ -115,8 +115,11 @@ export async function getJobRows(jobId: string): Promise<MostRow[]> {
     const res = await fetch(`${BASE}/jobs/${jobId}/rows`);
     const data = await handle<MostRow[]>(res);
     if (data && data.length > 0) return data;
-    throw new Error("Empty rows");
+    return [];
   } catch {
+    if (!jobId || !jobId.startsWith("demo-job")) {
+      return [];
+    }
     return [
       {
         s_no: 1,

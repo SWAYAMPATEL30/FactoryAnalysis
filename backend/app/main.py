@@ -622,10 +622,16 @@ async def get_job_video(job_id: str, request: Request):
     if not analysis_dir or not analysis_dir.exists():
         raise HTTPException(status_code=404, detail="Analysis directory missing")
 
-    # The UI plays the blurred video. Original may have been deleted to save space.
-    video_path = analysis_dir / "blurred.mp4"
-    if not video_path.exists():
+    is_completed = job.get("status") == "COMPLETED"
+
+    if is_completed:
+        video_path = analysis_dir / "blurred.mp4"
+        if not video_path.exists():
+            video_path = analysis_dir / "original.mp4"
+    else:
         video_path = analysis_dir / "original.mp4"
+        if not video_path.exists():
+            video_path = analysis_dir / "blurred.mp4"
         if not video_path.exists():
             raise HTTPException(status_code=404, detail="Video file missing")
 
