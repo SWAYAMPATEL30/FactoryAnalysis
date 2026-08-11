@@ -208,12 +208,6 @@ export function HomePage() {
             >
               Get started free
             </button>
-            <button
-              onClick={() => navigate("/pricing")}
-              className="rounded-md border border-white/20 px-8 py-4 text-base font-semibold text-white hover:border-white/50 transition-colors"
-            >
-              View pricing
-            </button>
           </div>
         </div>
       </section>
@@ -225,7 +219,6 @@ export function HomePage() {
           <div className="flex gap-6 text-xs text-white/40">
             <button onClick={() => navigate("/how-it-works")} className="hover:text-white/70">How It Works</button>
             <button onClick={() => navigate("/most-methodology")} className="hover:text-white/70">MOST Methodology</button>
-            <button onClick={() => navigate("/pricing")} className="hover:text-white/70">Pricing</button>
             <button onClick={() => navigate("/about")} className="hover:text-white/70">About</button>
           </div>
           <span className="text-xs text-white/30">© 2026 FactoryAnalysis</span>

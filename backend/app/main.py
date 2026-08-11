@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.models.schemas import Classification, MostRow, ReviewFlag, Segment
+from app.models.insights import ImprovementInsights
 from app.pipeline.stage8_human_review import HumanReviewEngine
 from app.pipeline.stage7_excel_writer import write_most_analysis_workbook
 from app.pipeline.stage2_preprocessing import blur_faces
@@ -29,6 +30,7 @@ from app.pipeline.stage3_cv_tracking import CVTracker
 from app.pipeline.stage4_segmentation import segment_video
 from app.pipeline.stage5_classification import classify_segments
 from app.pipeline.stage6_tmu_engine import build_most_row
+from app.pipeline.stage10_improvement_insights import generate_improvement_insights, load_cached_insights
 from app.services.gemini_client import GeminiClient
 
 app = FastAPI(
@@ -428,6 +430,44 @@ async def get_job_rows(job_id: str):
     engine: HumanReviewEngine | None = job.get("review_engine")
     rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
     return [r.model_dump() for r in sorted(rows, key=lambda r: r.s_no)]
+
+
+@app.get("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)
+async def get_job_insights(job_id: str):
+    """Returns cached Improvement Insights for a job, if previously generated."""
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    cached = load_cached_insights(UPLOAD_DIR, job_id)
+    if not cached:
+        raise HTTPException(status_code=404, detail="Insights not generated yet for this job")
+    return cached
+
+
+@app.post("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)
+async def create_or_refresh_job_insights(job_id: str, refresh: bool = False):
+    """On-demand trigger: Generates or refreshes AI Cycle-Improvement Insights for a study."""
+    job = JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    engine: HumanReviewEngine | None = job.get("review_engine")
+    rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
+    if not rows:
+        raise HTTPException(status_code=400, detail="Cannot generate insights for a study with zero rows")
+
+    insights = generate_improvement_insights(job_id, rows, UPLOAD_DIR, force_refresh=refresh)
+    
+    # Update Excel workbook if job excel path exists
+    excel_path = job.get("excel_path") or job.get("output_excel_path")
+    if excel_path and Path(excel_path).exists():
+        try:
+            write_most_analysis_workbook(rows, TEMPLATE_PATH, Path(excel_path), job.get("activity_description", ""), insights=insights)
+        except Exception as e:
+            pass
+
+    return insights
 
 
 _RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")

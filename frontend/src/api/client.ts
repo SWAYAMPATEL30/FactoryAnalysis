@@ -59,6 +59,18 @@ export async function getJobFlags(jobId: string): Promise<ReviewFlag[]> {
   return handle<ReviewFlag[]>(res);
 }
 
+export async function getJobInsights(jobId: string): Promise<import("./types").ImprovementInsights> {
+  const res = await fetch(`${BASE}/jobs/${jobId}/insights`);
+  return handle<import("./types").ImprovementInsights>(res);
+}
+
+export async function generateJobInsights(jobId: string, refresh = false): Promise<import("./types").ImprovementInsights> {
+  const res = await fetch(`${BASE}/jobs/${jobId}/insights?refresh=${refresh ? "true" : "false"}`, {
+    method: "POST",
+  });
+  return handle<import("./types").ImprovementInsights>(res);
+}
+
 export function excelDownloadUrl(jobId: string): string {
   return `${BASE}/jobs/${jobId}/excel`;
 }

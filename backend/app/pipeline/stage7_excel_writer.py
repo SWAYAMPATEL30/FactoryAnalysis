@@ -181,11 +181,282 @@ def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
     ws_chart.column_dimensions["G"].width = 18
 
 
+def _append_pareto_section(ws, rows: list) -> None:
+    """Appends a Pareto analysis section below the existing Gantt chart data in
+    the 'Activity Timeline Chart' sheet (Tab 3).  Writes a data table sorted
+    descending by TMU, highlights the top row, then embeds a native combo
+    BarChart + LineChart (secondary axis) so the chart is fully editable inside
+    Excel."""
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    TMU_TO_SEC = 0.036
+    total_tmu = sum(r.tmu for r in rows) if rows else 1
+    if total_tmu == 0:
+        total_tmu = 1
+
+    # Sort descending by TMU
+    sorted_rows = sorted(rows, key=lambda r: r.tmu, reverse=True)
+
+    # Find the last used row in the sheet
+    last_used = ws.max_row
+    section_start = last_used + 4  # leave 3 blank rows as visual separator
+
+    thin = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+
+    # Section title banner
+    ws.merge_cells(
+        start_row=section_start, start_column=1,
+        end_row=section_start, end_column=5
+    )
+    title_cell = ws.cell(row=section_start, column=1)
+    title_cell.value = "PARETO ANALYSIS \u2014 Time by Activity (sorted descending)"
+    title_cell.font = Font(name="Calibri", size=14, bold=True, color="FFFFFF")
+    title_cell.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[section_start].height = 30
+
+    # Sub-header row
+    header_row = section_start + 1
+    headers = ["Activity", "TMU", "Time (sec)", "% of Total", "Cumulative %"]
+    for col_idx, hdr in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_idx, value=hdr)
+        cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = thin
+    ws.row_dimensions[header_row].height = 20
+
+    # Data rows
+    data_start = header_row + 1
+    cumulative_pct = 0.0
+    for i, r in enumerate(sorted_rows):
+        row_num = data_start + i
+        own_sec = r.tmu * TMU_TO_SEC
+        own_pct = (r.tmu / total_tmu) * 100
+        cumulative_pct += own_pct
+
+        values = [
+            r.elemental_description or f"Activity {r.s_no}",
+            r.tmu,
+            round(own_sec, 3),
+            round(own_pct, 2),
+            round(min(cumulative_pct, 100.0), 2),
+        ]
+        for col_idx, val in enumerate(values, 1):
+            cell = ws.cell(row=row_num, column=col_idx, value=val)
+            cell.border = thin
+            if col_idx == 1:
+                cell.alignment = Alignment(horizontal="left")
+            else:
+                cell.alignment = Alignment(horizontal="right")
+                cell.number_format = "0.00"
+
+            # Highlight top row (highest TMU) in amber
+            if i == 0:
+                cell.fill = PatternFill(start_color="FFD966", end_color="FFD966", fill_type="solid")
+                cell.font = Font(name="Calibri", size=10, bold=True)
+            else:
+                cell.font = Font(name="Calibri", size=10)
+
+    data_end = data_start + len(sorted_rows) - 1
+
+    # Column widths
+    ws.column_dimensions["A"].width = max(ws.column_dimensions["A"].width or 0, 40)
+    ws.column_dimensions["B"].width = 10
+    ws.column_dimensions["C"].width = 12
+    ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 14
+
+    # ── Native combo chart: BarChart (time sec) + LineChart (cumulative %) ──
+    bar = BarChart()
+    bar.type = "col"
+    bar.style = 10
+    bar.title = "Pareto — Activity Time & Cumulative %"
+    bar.y_axis.title = "Time (seconds)"
+    bar.x_axis.title = "Activity"
+    bar.grouping = "clustered"
+    bar.height = 14
+    bar.width = 24
+
+    # Bar data: Time (sec) column (col 3)
+    bar_data = Reference(ws, min_col=3, min_row=header_row, max_row=data_end)
+    bar_cats = Reference(ws, min_col=1, min_row=data_start, max_row=data_end)
+    bar.add_data(bar_data, titles_from_data=True)
+    bar.set_categories(bar_cats)
+
+    # Line chart: Cumulative % column (col 5)
+    line = LineChart()
+    line.y_axis.axId = 200
+    line.y_axis.title = "Cumulative %"
+    line.y_axis.crosses = "max"  # render on right
+    line.y_axis.scaling.min = 0
+    line.y_axis.scaling.max = 100
+
+    line_data = Reference(ws, min_col=5, min_row=header_row, max_row=data_end)
+    line.add_data(line_data, titles_from_data=True)
+    line.set_categories(bar_cats)
+
+    # Combine: bar absorbs the line on secondary axis
+    bar += line
+
+    chart_anchor_row = data_start
+    ws.add_chart(bar, f"G{chart_anchor_row}")
+
+
+def _write_insights_tab(wb, insights) -> None:
+    """Creates a dedicated 'Improvement Insights' worksheet (Tab 4) containing
+    structured recommendations for Sections A, B, C, and D."""
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    sheet_name = "Improvement Insights"
+    if sheet_name in wb.sheetnames:
+        del wb[sheet_name]
+
+    ws = wb.create_sheet(title=sheet_name)
+    ws.views.sheetView[0].showGridLines = True
+
+    thin = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+
+    # Title Banner
+    ws.merge_cells("A1:F1")
+    title = ws["A1"]
+    title.value = "AI CYCLE-IMPROVEMENT INSIGHTS REPORT"
+    title.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+    title.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    title.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 35
+
+    # Section A: Bottleneck
+    ws.merge_cells("A3:F3")
+    sec_a = ws["A3"]
+    sec_a.value = "A. BOTTLENECK IDENTIFICATION (Primary Time Consumer)"
+    sec_a.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    sec_a.fill = PatternFill(start_color="C8452C", end_color="C8452C", fill_type="solid")
+    ws.row_dimensions[3].height = 25
+
+    b = insights.bottleneck
+    ws["A4"] = "Activity Name:"
+    ws["B4"] = b.activity_name
+    ws["A5"] = "Cycle Share:"
+    ws["B5"] = f"{b.time_sec:.1f}s ({b.pct_of_cycle:.1f}% of cycle time) - {b.tmu:.0f} TMU"
+    ws["A6"] = "Root Cause Analysis:"
+    ws["B6"] = b.reason
+
+    for r_num in range(4, 7):
+        ws[f"A{r_num}"].font = Font(name="Calibri", size=10, bold=True)
+
+    # Section B: Elimination Candidates
+    ws.merge_cells("A8:F8")
+    sec_b = ws["A8"]
+    sec_b.value = "B. NON-VALUE-ADD ELIMINATION CANDIDATES"
+    sec_b.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    sec_b.fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
+    ws.row_dimensions[8].height = 25
+
+    headers_b = ["#", "Activity Description", "Current Time (s)", "Waste Category", "Data-Grounded Reason", "Potential Saving (s)"]
+    for c_idx, h in enumerate(headers_b, 1):
+        cell = ws.cell(row=9, column=c_idx, value=h)
+        cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="595959", end_color="595959", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+
+    row_cursor = 10
+    for cand in insights.elimination_candidates:
+        ws.cell(row=row_cursor, column=1, value=cand.s_no).border = thin
+        ws.cell(row=row_cursor, column=2, value=cand.activity_name).border = thin
+        ws.cell(row=row_cursor, column=3, value=cand.current_time_sec).border = thin
+        ws.cell(row=row_cursor, column=4, value=cand.waste_type).border = thin
+        ws.cell(row=row_cursor, column=5, value=cand.reason).border = thin
+        ws.cell(row=row_cursor, column=6, value=cand.potential_saving_sec).border = thin
+        row_cursor += 1
+
+    # Section C: Equipment & Method Upgrades
+    row_cursor += 1
+    ws.merge_cells(f"A{row_cursor}:G{row_cursor}")
+    sec_c = ws[f"A{row_cursor}"]
+    sec_c.value = "C. EQUIPMENT & METHOD UPGRADE SUGGESTIONS"
+    sec_c.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    sec_c.fill = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
+    row_cursor += 1
+
+    headers_c = ["#", "Activity Description", "Current Method / Tool", "Suggested Upgrade", "Projected Time (s)", "Disclaimer", "Web Search Verification"]
+    for c_idx, h in enumerate(headers_c, 1):
+        cell = ws.cell(row=row_cursor, column=c_idx, value=h)
+        cell.font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="595959", end_color="595959", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center")
+    row_cursor += 1
+
+    for eq in insights.equipment_upgrades:
+        ws.cell(row=row_cursor, column=1, value=eq.s_no).border = thin
+        ws.cell(row=row_cursor, column=2, value=eq.activity_name).border = thin
+        ws.cell(row=row_cursor, column=3, value=eq.current_tool_or_method).border = thin
+        ws.cell(row=row_cursor, column=4, value=eq.suggested_upgrade).border = thin
+        ws.cell(row=row_cursor, column=5, value=eq.projected_time_sec).border = thin
+        disc_cell = ws.cell(row=row_cursor, column=6, value=eq.disclaimer)
+        disc_cell.border = thin
+        disc_cell.font = Font(name="Calibri", size=9, italic=True, color="C8452C")
+
+        link_cell = ws.cell(row=row_cursor, column=7)
+        link_cell.border = thin
+        if getattr(eq, "search_url", None):
+            link_cell.value = f'=HYPERLINK("{eq.search_url}", "🔍 Search Product Specs")'
+            link_cell.font = Font(name="Calibri", size=9, color="0000FF", underline="single")
+        else:
+            link_cell.value = "N/A"
+        row_cursor += 1
+
+    # Section D: Summary
+    row_cursor += 1
+    ws.merge_cells(f"A{row_cursor}:G{row_cursor}")
+    sec_d = ws[f"A{row_cursor}"]
+    sec_d.value = "D. PROJECTED NEW CYCLE TIME SUMMARY"
+    sec_d.font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+    sec_d.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    row_cursor += 1
+
+    s = insights.projected_summary
+    ws[f"A{row_cursor}"] = "Baseline Cycle Time:"
+    ws[f"B{row_cursor}"] = f"{s.current_cycle_sec:.2f}s ({s.current_tmu:.0f} TMU)"
+    row_cursor += 1
+    ws[f"A{row_cursor}"] = "Projected Cycle Time:"
+    ws[f"B{row_cursor}"] = f"{s.projected_cycle_sec:.2f}s ({s.projected_tmu:.0f} TMU)"
+    row_cursor += 1
+    ws[f"A{row_cursor}"] = "Total Time Savings:"
+    ws[f"B{row_cursor}"] = f"-{s.total_saving_sec:.2f}s (-{s.pct_reduction:.1f}%)"
+    row_cursor += 1
+    ws[f"A{row_cursor}"] = "Disclaimer:"
+    disc_summary = ws[f"B{row_cursor}"]
+    disc_summary.value = s.disclaimer
+    disc_summary.font = Font(name="Calibri", size=10, italic=True, color="C8452C")
+
+    # Column widths
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 35
+    ws.column_dimensions["C"].width = 25
+    ws.column_dimensions["D"].width = 35
+    ws.column_dimensions["E"].width = 18
+    ws.column_dimensions["F"].width = 30
+    ws.column_dimensions["G"].width = 28
+
+
 def write_most_analysis_workbook(
     rows: list[MostRow],
     template_path: Path,
     output_path: Path,
     activity_description: str,
+    insights: object | None = None,
 ) -> Path:
     if not rows:
         raise ValueError("no rows to write")
@@ -249,12 +520,23 @@ def write_most_analysis_workbook(
         ws[f"AM{r}"] = row.activity_timeline
         ws[f"AN{r}"] = row.uppercase_elemental_description
 
+    # Label column W header so it's human-readable in Excel
+    ws["W5"] = "TMU Time (sec)"
+
     last_row = FIRST_DATA_ROW + len(rows) - 1
     ws["D6"] = activity_description
     ws["W4"] = f"=SUM(W{FIRST_DATA_ROW}:W{last_row})"
 
-    # Generate dedicated Activity Timeline Chart worksheet tab
+    # Generate dedicated Activity Timeline Chart worksheet tab (Tab 3)
     _create_timeline_chart_sheet(wb, rows)
+
+    # Append Pareto section below the Gantt chart on the same Tab 3
+    ws_chart = wb["Activity Timeline Chart"]
+    _append_pareto_section(ws_chart, rows)
+
+    # Write Tab 4 if insights are provided
+    if insights is not None:
+        _write_insights_tab(wb, insights)
 
     wb.save(output_path)
     return output_path

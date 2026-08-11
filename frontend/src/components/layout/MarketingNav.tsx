@@ -5,7 +5,6 @@ const LINKS = [
   { to: "/how-it-works", label: "How It Works" },
   { to: "/most-methodology", label: "MOST Methodology" },
   { to: "/industries", label: "Industries" },
-  { to: "/pricing", label: "Pricing" },
   { to: "/about", label: "About" },
 ];
 
@@ -47,15 +46,9 @@ export function MarketingNav() {
         <div className="hidden md:flex items-center gap-3">
           <button
             onClick={() => navigate("/login")}
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-          >
-            Log in
-          </button>
-          <button
-            onClick={() => navigate("/pricing")}
             className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent/90 transition-colors"
           >
-            Request Access
+            Get Started
           </button>
         </div>
 

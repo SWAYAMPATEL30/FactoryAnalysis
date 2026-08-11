@@ -5,7 +5,7 @@ const INDUSTRIES = [
   {
     title: "Automotive Assembly",
     img: "/marketing/hero-factory.jpg",
-    clients: "BorgWarner, Tier 1 suppliers",
+    clients: "ABC Corp, Enterprise Manufacturers",
     scenarios: [
       { station: "Cam Phaser Assembly", tmu: "1,150 TMU", insight: "4% cycle time improvement tracked over Q3 after workstation reorganization" },
       { station: "Press Fit Operation", tmu: "980–1,020 TMU", insight: "Regression detected in September — operator flagged for re-training" },
@@ -15,7 +15,7 @@ const INDUSTRIES = [
   {
     title: "Electronics Manufacturing",
     img: "/marketing/hands-workstation.jpg",
-    clients: "Global Tech",
+    clients: "XYZ Industries",
     scenarios: [
       { station: "End Effector Sub-Assembly", tmu: "1,580 TMU", insight: "2 flags raised — harness routing classification reviewed by IE" },
       { station: "PCB Component Insertion", tmu: "620 TMU", insight: "Controlled Move dominant — suggests jig redesign opportunity" },

@@ -76,26 +76,30 @@ CRITICAL MICRO-MOTION SEGMENTATION RULE:
 2. A typical short work cycle (25-30 seconds) MUST produce roughly 18 to 28 distinct micro-activity segments.
 3. Align segment start and end timestamps strictly with physical activity transitions and the computer vision motion hints provided below.
 
-RICH NATURAL HUMAN LANGUAGE DESCRIPTION RULE:
-Every 'description' MUST be a detailed, rich natural human language sentence describing:
-- The actor ("An operator")
-- The specific hand/body movement ("reaching with right hand", "grasping with fingers", "lifting and moving", "positioning and seating into groove", "pressing trigger with thumb", "setting aside on rack")
-- The specific object or tool involved ("the green housing workpiece", "the press fixture tray", "the pneumatic adhesive dispenser")
-- The workstation location context ("from the lower component bin", "onto the press base plate")
+PROFESSIONAL MANUFACTURING TERMINOLOGY RULE:
+- NEVER use generic visual color terms like "green piece", "blue tray", "black part", "colored object", or "stuff".
+- ALWAYS use specific, precise technical manufacturing names for the parts, tools, and workstation elements being handled (e.g., "solenoid valve housing", "circuit board assembly", "connector pin", "stamped steel bracket", "pneumatic torque screwdriver", "toggle clamp fixture", "component feed bin").
 
-EXAMPLES OF RICH MICRO-MOTION DESCRIPTIONS (strictly segmented on every micro-transition):
-  "An operator reaching with right hand toward the lower component bin" (human_movement_state: MOVE, machine_state: IDLE)
-  "An operator grasping the green housing workpiece from the bin with fingers" (human_movement_state: GRASP, machine_state: IDLE)
-  "An operator lifting and moving the green workpiece toward the press fixture" (human_movement_state: MOVE, machine_state: IDLE)
-  "An operator positioning the green workpiece onto the fixture base plate" (human_movement_state: MOVE, machine_state: IDLE)
-  "An operator holding the workpiece steady in the fixture with left hand" (human_movement_state: HOLD, machine_state: IDLE)
-  "An operator reaching with right hand to grasp the pneumatic adhesive dispenser tool" (human_movement_state: GRASP, machine_state: IDLE)
-  "An operator applying adhesive glue onto the workpiece seam using the dispenser tool" (human_movement_state: MOVE, machine_state: ACTUATING)
-  "An operator laying aside the dispensing tool onto the workstation rack" (human_movement_state: RELEASE, machine_state: IDLE)
+RICH NATURAL HUMAN LANGUAGE DESCRIPTION RULE:
+Every 'description' MUST be a detailed, professional industrial sentence describing:
+- The actor ("An operator")
+- The specific hand/body movement ("reaching with right hand", "grasping with fingers", "lifting and moving", "positioning and seating into alignment groove", "actuating pneumatic press trigger", "setting aside in output bin")
+- The specific technical component or tool involved ("the solenoid housing component", "the assembly fixture base plate", "the pneumatic adhesive dispenser")
+- The workstation location context ("from the primary component bin", "onto the fixture alignment pins")
+
+EXAMPLES OF HIGH-PRECISION MICRO-MOTION DESCRIPTIONS (strictly segmented on every micro-transition):
+  "An operator reaching with right hand toward the component bin" (human_movement_state: MOVE, machine_state: IDLE)
+  "An operator grasping the solenoid valve housing component from the bin" (human_movement_state: GRASP, machine_state: IDLE)
+  "An operator lifting and moving the solenoid housing toward the assembly fixture" (human_movement_state: MOVE, machine_state: IDLE)
+  "An operator positioning the solenoid housing onto the fixture alignment pins" (human_movement_state: MOVE, machine_state: IDLE)
+  "An operator clamping the toggle latch onto the fixture base plate" (human_movement_state: HOLD, machine_state: IDLE)
+  "An operator reaching with right hand to grasp the pneumatic torque screwdriver" (human_movement_state: GRASP, machine_state: IDLE)
+  "An operator fastening M4 machine screws into the housing assembly using torque screwdriver" (human_movement_state: MOVE, machine_state: ACTUATING)
+  "An operator setting aside the completed assembly into the finished goods crate" (human_movement_state: RELEASE, machine_state: IDLE)
 
 For each micro-activity segment, output:
   - t_start_sec, t_end_sec: exact micro-boundary timestamps in seconds
-  - description: rich, detailed natural human language sentence describing the action
+  - description: rich, technical manufacturing description sentence
   - human_movement_state: state of movement ("MOVE", "GRASP", "HOLD", "RELEASE")
   - machine_state: state of machine ("IDLE", "ACTUATING")
 

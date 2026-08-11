@@ -47,40 +47,48 @@ def build_uppercase_elemental_description(
     segment_desc: str, human_state: str = "MOVE", data_card: str = "G"
 ) -> str:
     """Generates standard uppercase industrial MOST elemental descriptions matching
-    traditional MOST time study formats (e.g. 'WITHIN REACH, GRASP THE FIXTURE',
-    'PUSH TO ADJUST < 12 INCHES', 'WITHIN REACH, LAY ASIDE THE WORKPIECE')."""
-    desc_upper = segment_desc.upper()
+    traditional MOST time study formats, dynamically preserving specific technical part/tool
+    names while stripping vague color phrases (e.g. 'green piece', 'blue tray')."""
+    desc_clean = segment_desc.upper()
+
+    # Clean out vague color phrases
+    for color in ["GREEN ", "BLUE ", "BLACK ", "RED ", "YELLOW ", "WHITE ", "GRAY ", "GREY ", "PIECE"]:
+        desc_clean = desc_clean.replace(color, "")
 
     object_name = "THE WORKPIECE"
-    if "FIXTURE" in desc_upper or "TRAY" in desc_upper:
-        object_name = "THE FIXTURE"
-    elif "TOOL" in desc_upper or "DISPENSER" in desc_upper or "GLUE" in desc_upper or "SEALANT" in desc_upper:
-        object_name = "GLUING TOOL"
-    elif "CART" in desc_upper or "TROLLEY" in desc_upper:
-        object_name = "THE CART"
-    elif "HOIST" in desc_upper or "STRAP" in desc_upper or "HOOK" in desc_upper or "CRANE" in desc_upper:
-        object_name = "THE HOIST STRAP"
-    elif "FOAM" in desc_upper or "PACKAGING" in desc_upper or "COVER" in desc_upper:
-        object_name = "THE PACKAGING"
-    elif "CRATE" in desc_upper or "BOX" in desc_upper:
-        object_name = "THE CRATE"
-    elif "SCREW" in desc_upper or "BOLT" in desc_upper or "COMPONENT" in desc_upper or "PIECE" in desc_upper:
-        object_name = "THE WORKPIECE"
+    if "SOLENOID" in desc_clean or "VALVE" in desc_clean:
+        object_name = "THE SOLENOID VALVE HOUSING"
+    elif "CIRCUIT" in desc_clean or "BOARD" in desc_clean or "PCB" in desc_clean:
+        object_name = "THE CIRCUIT BOARD"
+    elif "FIXTURE" in desc_clean or "BASE PLATE" in desc_clean:
+        object_name = "THE ASSEMBLY FIXTURE"
+    elif "DISPENSER" in desc_clean or "GLUE" in desc_clean or "SEALANT" in desc_clean:
+        object_name = "THE ADHESIVE DISPENSER"
+    elif "TORQUE" in desc_clean or "SCREWDRIVER" in desc_clean or "WRENCH" in desc_clean:
+        object_name = "THE TORQUE SCREWDRIVER"
+    elif "SCREW" in desc_clean or "BOLT" in desc_clean or "FASTENER" in desc_clean:
+        object_name = "THE FASTENERS"
+    elif "TRAY" in desc_clean or "BIN" in desc_clean or "CRATE" in desc_clean:
+        object_name = "THE COMPONENT FEED TRAY"
+    elif "CART" in desc_clean or "TROLLEY" in desc_clean:
+        object_name = "THE MATERIAL CART"
+    elif "HOIST" in desc_clean or "STRAP" in desc_clean or "CRANE" in desc_clean:
+        object_name = "THE HOIST ASSEMBLY"
 
-    if "RE-GRASP" in desc_upper or ("HOLD" in desc_upper and human_state == "HOLD"):
+    if "RE-GRASP" in desc_clean or ("HOLD" in desc_clean and human_state == "HOLD"):
         return f"WITHIN REACH, RE-GRASP {object_name}, HOLD"
-    if "GRASP" in desc_upper or human_state == "GRASP" or "PICK" in desc_upper or "GRAB" in desc_upper:
+    if "GRASP" in desc_clean or human_state == "GRASP" or "PICK" in desc_clean or "GRAB" in desc_clean:
         return f"WITHIN REACH, GRASP {object_name}"
-    if "RELEASE" in desc_upper or human_state == "RELEASE" or "LAY ASIDE" in desc_upper or "RETURN" in desc_upper:
+    if "RELEASE" in desc_clean or human_state == "RELEASE" or "LAY ASIDE" in desc_clean or "SET ASIDE" in desc_clean or "RETURN" in desc_clean:
         return f"WITHIN REACH, LAY ASIDE {object_name}"
-    if "PUSH" in desc_upper and ("ADJUST" in desc_upper or "MOVE" in desc_upper or "CART" in desc_upper):
+    if "PUSH" in desc_clean and ("ADJUST" in desc_clean or "MOVE" in desc_clean or "CART" in desc_clean):
         return "PUSH TO ADJUST < 12 INCHES"
-    if "PULL" in desc_upper or "HOIST STRAP" in desc_upper:
-        return f"PULL TRAY < 12 INCHES" if "TRAY" in desc_upper else "PUSH TO ADJUST < 12 INCHES"
-    if "BUTTON" in desc_upper or "APPLY" in desc_upper or "PRESS" in desc_upper or "ACTUATE" in desc_upper:
-        return "PUSH BUTTON TO APPLY THE GLUE < 12 INCHES" if ("GLUE" in desc_upper or "TOOL" in desc_upper) else "PUSH BUTTON TO APPLY < 12 INCHES"
-    if "POSITION" in desc_upper or "PLACE" in desc_upper or "ALIGN" in desc_upper or "SEAT" in desc_upper or "INSERT" in desc_upper or "FIT" in desc_upper:
-        return f"WITHIN REACH, PLACE {object_name} ON THE WORKPIECE" if object_name == "GLUING TOOL" else f"WITHIN REACH, PLACE {object_name} ON THE FIXTURE"
+    if "PULL" in desc_clean or "HOIST" in desc_clean:
+        return f"PULL {object_name} < 12 INCHES"
+    if "BUTTON" in desc_clean or "TRIGGER" in desc_clean or "ACTUATE" in desc_clean or "PRESS" in desc_clean:
+        return f"ACTUATE TRIGGER / PUSH BUTTON TO APPLY < 12 INCHES"
+    if "POSITION" in desc_clean or "PLACE" in desc_clean or "ALIGN" in desc_clean or "SEAT" in desc_clean or "INSERT" in desc_clean or "FASTEN" in desc_clean:
+        return f"WITHIN REACH, PLACE & SEAT {object_name} ON FIXTURE"
 
     return f"WITHIN REACH, GRASP {object_name}"
 

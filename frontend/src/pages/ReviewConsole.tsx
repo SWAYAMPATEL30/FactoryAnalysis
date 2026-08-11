@@ -11,10 +11,13 @@ import { LiveLogPanel } from "../components/LiveLogPanel";
 import { EfficiencyGauge } from "../components/EfficiencyGauge";
 import { VaNvaDonut } from "../components/VaNvaDonut";
 import { MostTable } from "../components/MostTable";
+import { ParetoChart } from "../components/charts/ParetoChart";
+import { ImprovementInsightsPanel } from "../components/ImprovementInsightsPanel";
 import { useJobStream } from "../hooks/useJobStream";
 import { useToast } from "../components/ToastProvider";
 import type { TaxonomyBucket } from "../api/types";
 import { getJobStatus, getJobRows, getJobFlags, excelDownloadUrl, videoUrl } from "../api/client";
+
 
 const TERMINAL = new Set(["COMPLETED", "FAILED"]);
 
@@ -168,6 +171,25 @@ export function ReviewConsole() {
                 <VaNvaDonut sums={sums} />
               </div>
             )}
+
+            {rows.length > 0 && (
+              <div className="mb-6 rounded-xl border border-line bg-raised p-4 sm:p-6">
+                <h2 className="font-semibold text-ink mb-1 text-sm">
+                  Activity Pareto — Time Distribution
+                </h2>
+                <p className="text-xs text-ink-faint mb-4">
+                  Sorted by time consumed (descending). 1 TMU = 0.036 sec.
+                </p>
+                <ParetoChart rows={rows} height={280} />
+              </div>
+            )}
+
+            {rows.length > 0 && (
+              <div className="mb-6">
+                <ImprovementInsightsPanel jobId={jobId} />
+              </div>
+            )}
+
           </>
         )}
 
