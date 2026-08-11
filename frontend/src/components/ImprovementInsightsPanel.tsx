@@ -405,6 +405,17 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
               </button>
             </div>
 
+            {/* Equipment Category Preview Image */}
+            {selectedUpgrade.image_url && (
+              <div className="overflow-hidden rounded-xl border border-line bg-slate-900 flex items-center justify-center p-2 max-h-48 shadow-inner">
+                <img
+                  src={selectedUpgrade.image_url}
+                  alt={selectedUpgrade.suggested_upgrade}
+                  className="max-h-44 w-auto object-contain rounded-lg transition-transform hover:scale-102"
+                />
+              </div>
+            )}
+
             {/* Observed Method vs Target Savings */}
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-purple-500/10 bg-purple-500/5 p-3.5 text-xs font-mono">
               <div>

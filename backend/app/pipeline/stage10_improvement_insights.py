@@ -65,15 +65,16 @@ def _evaluate_equipment_suitability(row: MostRow) -> float:
     return base_score + min(40.0, row.tmu * 0.4)
 
 
-def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str, str, str, List[str], List[str]]:
+def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: str) -> tuple[str, str, str, str, str, str, List[str], List[str]]:
     """Performs real live web search & vendor specification matching for equipment upgrades,
-    providing structured specs, top commercial brands, Google Shopping URLs, and catalog links."""
+    providing structured specs, top commercial brands, Google Shopping URLs, catalog links, and equipment preview images."""
     text = f"{activity_desc} {mov_details}".upper()
 
     if "GLUE" in text or "DISPENS" in text or "SEALANT" in text:
         query_topic = "industrial automatic precision adhesive dispenser"
         current_tool = "Manual adhesive dispenser bottle / gun"
         default_upgrade = "Pneumatic Auto-Feed Precision Dispensing System"
+        image_url = "/images/equipment/pneumatic_dispenser.png"
         key_specs = [
             "Digital Pressure & Timing Control (0.01s resolution)",
             "Anti-Drip Vacuum Suck-Back Prevention",
@@ -86,6 +87,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         query_topic = "electric torque screwdriver automatic shutoff assembly line"
         current_tool = "Standard manual / click torque wrench"
         default_upgrade = "Electric Preset Torque Driver with Auto-Stop & Count Verification"
+        image_url = "/images/equipment/electric_torque_driver.png"
         key_specs = [
             "Preset Mechanical Auto-Shutoff Clutch (0.5 - 5.0 Nm)",
             "Brushless Low-Noise DC Motor",
@@ -98,6 +100,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         query_topic = "pneumatic benchtop assembly press safety light curtain"
         current_tool = "Manual arbor press lever"
         default_upgrade = "Pneumatic Precision Benchtop Press with Light Curtain"
+        image_url = "/images/equipment/benchtop_press.png"
         key_specs = [
             "Pneumatic Pressing Force (2 - 10 kN at 6 bar)",
             "Dual-Hand Anti-TIE Safety Controls",
@@ -110,6 +113,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         query_topic = "zero gravity pneumatic manipulator arm factory assembly"
         current_tool = "Manual heavy lifting / manual hoist"
         default_upgrade = "Zero-Gravity Pneumatic Load Balancer Manipulator"
+        image_url = "/images/equipment/zero_gravity_manipulator.png"
         key_specs = [
             "Zero-Gravity Load Balancing (10 - 50 kg load range)",
             "Pneumatic Articulated Arm Reach (2.0 meter radius)",
@@ -122,6 +126,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
         query_topic = "quick toggle ergonomic pneumatic clamping fixture"
         current_tool = "Manual part placement & manual vice"
         default_upgrade = "Quick-Toggle Ergonomic Pneumatic Fixture"
+        image_url = "/images/equipment/pneumatic_fixture.png"
         key_specs = [
             "Pneumatic Cylinder Actuation (6 bar line pressure)",
             "Hardened Anodized Aluminum Base Plate",
@@ -149,7 +154,7 @@ def _web_search_equipment_upgrade(activity_desc: str, mov_details: str, card: st
     except Exception as e:
         logger.debug("Web search query failed, using grounded equipment standard: %s", e)
 
-    return current_tool, upgrade, search_url, shopping_url, mcmaster_url, key_specs, top_vendors
+    return current_tool, upgrade, search_url, shopping_url, mcmaster_url, image_url, key_specs, top_vendors
 
 
 def _get_insights_cache_path(upload_dir: Path, job_id: str) -> Path:
@@ -231,7 +236,7 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
             r_sec = r.tmu * TMU_TO_SEC
             mov_details = r.activity_movement_details or ""
             card = r.data_card
-            current_tool, upgrade_suggestion, search_url, shopping_url, mcmaster_url, key_specs, top_vendors = _web_search_equipment_upgrade(
+            current_tool, upgrade_suggestion, search_url, shopping_url, mcmaster_url, image_url, key_specs, top_vendors = _web_search_equipment_upgrade(
                 r.elemental_description or "", mov_details, card
             )
             saving = round(r_sec * 0.35, 2)
@@ -246,6 +251,7 @@ def _build_deterministic_insights(job_id: str, rows: List[MostRow]) -> Improveme
                     time_saved_sec=saving,
                     key_specs=key_specs,
                     top_vendors=top_vendors,
+                    image_url=image_url,
                     search_url=search_url,
                     shopping_url=shopping_url,
                     mcmaster_url=mcmaster_url,

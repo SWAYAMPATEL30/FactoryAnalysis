@@ -109,6 +109,7 @@ export interface EquipmentUpgradeSuggestion {
   time_saved_sec: number;
   key_specs?: string[];
   top_vendors?: string[];
+  image_url?: string | null;
   search_url?: string | null;
   shopping_url?: string | null;
   mcmaster_url?: string | null;

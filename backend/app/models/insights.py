@@ -46,6 +46,10 @@ class EquipmentUpgradeSuggestion(BaseModel):
         default_factory=list,
         description="Leading industrial manufacturers/suppliers providing this tool category"
     )
+    image_url: str | None = Field(
+        default=None,
+        description="Public image URL previewing this commercial equipment category"
+    )
     search_url: str | None = Field(
         default=None,
         description="Direct web search URL to verify commercial product models, pricing, and specs from industrial suppliers"
