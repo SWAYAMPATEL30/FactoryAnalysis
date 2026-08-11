@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import shutil
@@ -14,6 +15,8 @@ import time
 import uuid
 from pathlib import Path
 from typing import Dict, Any, List
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, BackgroundTasks, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -68,9 +71,69 @@ MANUAL_SEC_PER_MOTION = 180
 
 # In-memory job store for Phase 0/1 (pluggable to DB in cloud deployment)
 JOBS: Dict[str, Dict[str, Any]] = {}
-
-# Per-job event log for SSE streaming (list of dicts with stage/status/detail/progress)
 JOB_EVENTS: Dict[str, List[dict]] = {}
+_JOBS_STORE_FILE = UPLOAD_DIR / "jobs_store.json"
+
+
+def _save_job_store() -> None:
+    """Persist serializable job metadata to disk so server reloads do not wipe active/completed jobs."""
+    data = {}
+    for job_id, job in JOBS.items():
+        data[job_id] = {
+            "job_id": job_id,
+            "status": job.get("status"),
+            "phase": job.get("phase"),
+            "activity_description": job.get("activity_description"),
+            "station_no": job.get("station_no"),
+            "activity_no": job.get("activity_no"),
+            "started_at": job.get("started_at"),
+            "completed_at": job.get("completed_at"),
+            "error": job.get("error"),
+            "raw_video_path": str(job["raw_video_path"]) if job.get("raw_video_path") else None,
+            "excel_path": str(job["excel_path"]) if job.get("excel_path") else None,
+            "rows": [r.model_dump() for r in job.get("rows", [])],
+        }
+    try:
+        _JOBS_STORE_FILE.write_text(json.dumps(data, indent=2))
+    except Exception as e:
+        logger.warning("Failed to save job store to disk: %s", e)
+
+
+def _load_job_store() -> None:
+    """Load persisted jobs from disk on server startup."""
+    if not _JOBS_STORE_FILE.exists():
+        return
+    try:
+        raw = json.loads(_JOBS_STORE_FILE.read_text())
+        for job_id, item in raw.items():
+            raw_video = Path(item["raw_video_path"]) if item.get("raw_video_path") else None
+            excel = Path(item["excel_path"]) if item.get("excel_path") else None
+            rows = [MostRow.model_validate(r) for r in item.get("rows", [])]
+            engine = HumanReviewEngine(rows, [], []) if rows else None
+            JOBS[job_id] = {
+                "job_id": job_id,
+                "status": item.get("status", "COMPLETED"),
+                "phase": item.get("phase", "COMPLETED"),
+                "activity_description": item.get("activity_description", ""),
+                "station_no": item.get("station_no", ""),
+                "activity_no": item.get("activity_no", ""),
+                "started_at": item.get("started_at"),
+                "completed_at": item.get("completed_at"),
+                "error": item.get("error"),
+                "raw_video_path": raw_video,
+                "excel_path": excel,
+                "rows": rows,
+                "segments": [],
+                "flags": [],
+                "review_engine": engine,
+            }
+        logger.info("Loaded %d persisted jobs from disk store", len(JOBS))
+    except Exception as e:
+        logger.warning("Failed to restore job store from disk: %s", e)
+
+
+# Load existing jobs from disk on module import
+_load_job_store()
 
 
 def _emit(job_id: str, stage: str, status: str, detail: str = "", progress: float | None = None) -> None:
@@ -127,6 +190,7 @@ def _create_job(
         "activity_no": activity_no,
         "fast_mode": fast_mode,
     }
+    _save_job_store()
 
     background_tasks.add_task(
         _process_video_job,
@@ -154,12 +218,13 @@ def _process_video_job(
         JOBS[job_id]["status"] = "PROCESSING"
         JOBS[job_id]["started_at"] = time.monotonic()
 
-        # Stage 2: Face blur
-        JOBS[job_id]["phase"] = "PREPROCESSING"
-        _emit(job_id, "PREPROCESSING", "running", "Detecting and blurring faces…", 0.0)
-        blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
-        blur_faces(raw_video_path, blurred_path)
-        _emit(job_id, "PREPROCESSING", "done", "Face blur complete", 1.0)
+        # Stage 2: Face blur (commented out as requested)
+        # JOBS[job_id]["phase"] = "PREPROCESSING"
+        # _emit(job_id, "PREPROCESSING", "running", "Detecting and blurring faces…", 0.0)
+        # blurred_path = UPLOAD_DIR / f"_blurred_{raw_video_path.name}"
+        # blur_faces(raw_video_path, blurred_path)
+        # _emit(job_id, "PREPROCESSING", "done", "Face blur complete", 1.0)
+        blurred_path = raw_video_path  # Skip blurring pass and use raw video directly
 
         # Stage 3: CV tracking
         mode_label = "fast (640p, 2fps, skip frames)" if fast_mode else "accurate (full res, 4fps)"
@@ -208,7 +273,14 @@ def _process_video_job(
                     r.activity_no = activity_no
                 rows.append(r)
 
-        write_most_analysis_workbook(rows, TEMPLATE_PATH, output_excel_path, activity_desc)
+        # Auto-generate improvement insights and embed into final Excel workbook
+        insights = None
+        try:
+            insights = generate_improvement_insights(job_id, rows, UPLOAD_DIR)
+        except Exception as e:
+            logger.warning("Auto-generating insights failed during pipeline completion for job %s: %s", job_id, e)
+
+        write_most_analysis_workbook(rows, TEMPLATE_PATH, output_excel_path, activity_desc, insights=insights)
         _emit(job_id, "FINALIZING", "done", f"{len(rows)} rows written to workbook", 1.0)
 
         # Store results
@@ -221,11 +293,13 @@ def _process_video_job(
         JOBS[job_id]["flags"] = review_flags
         JOBS[job_id]["review_engine"] = engine
         JOBS[job_id]["excel_path"] = output_excel_path
+        _save_job_store()
         _emit(job_id, "COMPLETED", "done", f"Analysis complete — {len(rows)} motions classified", 1.0)
     except Exception as e:
         JOBS[job_id]["status"] = "FAILED"
         JOBS[job_id]["phase"] = "FAILED"
         JOBS[job_id]["error"] = str(e)
+        _save_job_store()
         _emit(job_id, "FAILED", "error", str(e))
 
 
@@ -434,15 +508,21 @@ async def get_job_rows(job_id: str):
 
 @app.get("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)
 async def get_job_insights(job_id: str):
-    """Returns cached Improvement Insights for a job, if previously generated."""
+    """Returns cached Improvement Insights for a job, or generates them on-the-fly if not cached."""
     job = JOBS.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     cached = load_cached_insights(UPLOAD_DIR, job_id)
-    if not cached:
-        raise HTTPException(status_code=404, detail="Insights not generated yet for this job")
-    return cached
+    if cached:
+        return cached
+
+    engine: HumanReviewEngine | None = job.get("review_engine")
+    rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
+    if not rows:
+        raise HTTPException(status_code=404, detail="No rows available to generate insights yet")
+
+    return generate_improvement_insights(job_id, rows, UPLOAD_DIR)
 
 
 @app.post("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)

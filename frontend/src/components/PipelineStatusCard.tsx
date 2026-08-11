@@ -13,7 +13,7 @@ import type { JobStatusResponse } from "../api/types";
 // 6 stages map from backend phase → friendly label
 const STAGES: { phase: string; label: string; estimatedSec: number }[] = [
   { phase: "QUEUED",       label: "Uploaded",          estimatedSec: 2   },
-  { phase: "PREPROCESSING",label: "Blurring faces",    estimatedSec: 30  },
+  { phase: "PREPROCESSING",label: "Preprocessing",    estimatedSec: 5   },
   { phase: "CV_TRACKING",  label: "Tracking motion",   estimatedSec: 60  },
   { phase: "UPLOADING",    label: "Sending to AI",     estimatedSec: 20  },
   { phase: "SEGMENTING",   label: "AI analysis",       estimatedSec: 60  },
