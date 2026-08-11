@@ -22,6 +22,19 @@ export interface JobStatusResponse {
   error: string | null;
   elapsed_sec: number | null;
   estimated_manual_sec: number | null;
+  workstation_id?: string | null;
+}
+
+export interface Workstation {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+}
+
+export interface WorkstationCreate {
+  name: string;
+  description?: string;
 }
 
 export type DataCard = "G" | "C" | "T" | "PT";

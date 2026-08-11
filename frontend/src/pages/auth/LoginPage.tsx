@@ -11,10 +11,6 @@ const VIDEOS = [
   "/marketing/factory4.mp4",
 ];
 
-const DEMO_COMPANIES = [
-  { name: "ABC Corp", description: "3 workstations · Growth plan" },
-  { name: "XYZ Industries", description: "2 workstations · Starter plan" },
-];
 
 function LoginVideoBackground() {
   const [currentIndex, setCurrentIndex] = useState(() => {
@@ -102,7 +98,7 @@ export function LoginPage() {
   const [signUpCompany, setSignUpCompany] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPass, setSignUpPass] = useState("");
-  const [signUpRole, setSignUpRole] = useState<Role>("engineer");
+  const [signUpRole, setSignUpRole] = useState<Role | "">("");
 
   const [error, setError] = useState("");
   const [successBanner, setSuccessBanner] = useState("");
@@ -168,7 +164,7 @@ export function LoginPage() {
       signUpPass.trim(),
       signUpName.trim(),
       signUpCompany.trim(),
-      signUpRole
+      signUpRole as Role
     );
     setLoading(false);
 
@@ -210,7 +206,7 @@ export function LoginPage() {
     }
   }
 
-  async function handleDemoAccess(company: string, name: string, role: Role) {
+  async function handleDemoAccess(company: string) {
     const demoEmail = company === "BorgWarner" ? "demo@borgwarner.com" : "demo@globaltech.com";
     const demoPass = "demo123";
     
@@ -228,22 +224,23 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-start px-4 md:pl-[12vw] relative overflow-hidden font-body selection:bg-sky-500 selection:text-white z-0">
+    <div className="min-h-screen flex flex-col items-start px-4 md:pl-[12vw] relative overflow-y-auto overflow-x-hidden font-body selection:bg-sky-500 selection:text-white z-0">
       <LoginVideoBackground />
 
-      {/* Brand Header */}
-      <Link to="/" className="flex items-center gap-3 mb-6 no-underline group z-10 hover:opacity-80 transition-opacity">
-        <BrandLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
-        <div className="flex flex-col">
-          <BrandTitle className="text-xl" />
-          <span className="font-mono text-[9.5px] uppercase tracking-widest text-sky-400 font-semibold leading-tight mt-0.5">
-            Industrial Intelligence Platform
-          </span>
-        </div>
-      </Link>
+      <div className="my-auto w-full py-12 z-10 flex flex-col items-start">
+        {/* Brand Header */}
+        <Link to="/" className="flex items-center gap-3 mb-6 no-underline group hover:opacity-80 transition-opacity">
+          <BrandLogo className="w-10 h-10 group-hover:scale-105 transition-transform" />
+          <div className="flex flex-col">
+            <BrandTitle className="text-xl" />
+            <span className="font-mono text-[9.5px] uppercase tracking-widest text-sky-400 font-semibold leading-tight mt-0.5">
+              Industrial Intelligence Platform
+            </span>
+          </div>
+        </Link>
 
-      {/* Compact Auth Card (max-w-md ~400px width per prompt instruction) */}
-      <div className="w-full max-w-[420px] bg-[rgba(15,18,26,0.55)] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-[20px] z-10 relative">
+        {/* Compact Auth Card (max-w-md ~400px width per prompt instruction) */}
+        <div className="w-full max-w-[420px] bg-[rgba(15,18,26,0.55)] border border-[rgba(255,255,255,0.08)] rounded-2xl p-6 sm:p-7 shadow-2xl backdrop-blur-[20px] relative mt-2">
         {/* Sign In / Sign Up Mode Switcher */}
         <div className="flex bg-[#080e1a] p-1 rounded-xl mb-6 border border-slate-800">
           <button
@@ -347,6 +344,19 @@ export function LoginPage() {
         {mode === "signup" && (
           <form onSubmit={handleSignUp} className="flex flex-col gap-3.5">
             <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Role <span className="text-sky-400">*</span></label>
+              <select
+                value={signUpRole}
+                onChange={(e) => setSignUpRole(e.target.value as Role)}
+                className="w-full rounded-xl px-3 py-2 text-xs text-white bg-slate-900/90 border border-slate-700/80 focus:outline-none focus:border-sky-400"
+              >
+                <option value="" disabled hidden>Select Role...</option>
+                <option value="manager">Manager</option>
+                <option value="engineer">Employee</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-xs font-medium text-slate-300 mb-1">
                 Full Name <span className="text-sky-400">*</span>
               </label>
@@ -403,21 +413,9 @@ export function LoginPage() {
               <p className="text-[10px] text-slate-400 mt-1 ml-1">Must be at least 6 characters long.</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Role</label>
-              <select
-                value={signUpRole}
-                onChange={(e) => setSignUpRole(e.target.value as Role)}
-                className="w-full rounded-xl px-3 py-2 text-xs text-white bg-slate-900/90 border border-slate-700/80 focus:outline-none focus:border-sky-400"
-              >
-                <option value="manager">Manager</option>
-                <option value="engineer">Employee</option>
-              </select>
-            </div>
-
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || signUpRole === ""}
               className="w-full mt-1 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-semibold text-white text-xs shadow-lg shadow-sky-500/25 hover:from-sky-400 transition-all cursor-pointer disabled:opacity-50"
             >
               {loading ? "Creating Account…" : "Register"}
@@ -466,18 +464,19 @@ export function LoginPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => handleDemoAccess("BorgWarner", "Demo Engineer", "engineer")}
+              onClick={() => handleDemoAccess("BorgWarner")}
               className="flex-1 py-1.5 px-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300 hover:border-sky-400/50 hover:text-white transition-all cursor-pointer truncate"
             >
               BorgWarner Demo
             </button>
             <button
-              onClick={() => handleDemoAccess("Global Tech", "Demo Engineer", "engineer")}
+              onClick={() => handleDemoAccess("Global Tech")}
               className="flex-1 py-1.5 px-2 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-300 hover:border-sky-400/50 hover:text-white transition-all cursor-pointer truncate"
             >
               Global Tech Demo
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

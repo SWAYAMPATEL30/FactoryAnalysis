@@ -3,10 +3,6 @@ import type { ReactNode } from "react";
 import type { Company, Role, User } from "../types/models";
 import { supabase } from "../lib/supabase";
 
-const DEMO_COMPANIES: Company[] = [
-  { id: "abc-corp", name: "ABC Corp", plan: "growth" },
-  { id: "xyz-ind", name: "XYZ Industries", plan: "starter" },
-];
 
 interface AuthState {
   company: Company | null;
@@ -16,7 +12,7 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (companyName: string, userName: string, role: Role, email?: string) => void;
-  signInWithEmail: (email: string, pass: string) => Promise<{ error?: string }>;
+  signInWithEmail: (email: string, pass: string) => Promise<{ error?: string; code?: string }>;
   signUpWithEmail: (email: string, pass: string, name: string, companyName: string, role: Role) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   resendVerificationEmail: (email: string) => Promise<{ error?: string }>;

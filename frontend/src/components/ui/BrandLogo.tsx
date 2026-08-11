@@ -1,4 +1,3 @@
-import React from 'react';
 
 export function BrandLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
