@@ -65,8 +65,31 @@ def _clear_existing_data_rows(ws) -> None:
 
 
 def _write_trace_headers(ws) -> None:
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    thin_border = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+
+    # Set explicit trace header texts first
     for col, header in TRACE_HEADERS.items():
         ws[f"{col}5"] = header
+
+    # Format ALL header cells in row 5 from column A (1) to AN (40)
+    for c in range(1, 41):
+        col_letter = get_column_letter(c)
+        cell = ws[f"{col_letter}5"]
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_align
+        cell.border = thin_border
 
 
 def _create_timeline_chart_sheet(wb, rows: list[MostRow]) -> None:
@@ -519,6 +542,20 @@ def write_most_analysis_workbook(
         ws[f"AL{r}"] = row.activity_duration_sec
         ws[f"AM{r}"] = row.activity_timeline
         ws[f"AN{r}"] = row.uppercase_elemental_description
+
+        # Apply clean thin borders across ALL data cells (columns A to AN)
+        from openpyxl.styles import Border, Side
+        from openpyxl.utils import get_column_letter
+
+        thin_data_border = Border(
+            left=Side(style="thin", color="D9D9D9"),
+            right=Side(style="thin", color="D9D9D9"),
+            top=Side(style="thin", color="D9D9D9"),
+            bottom=Side(style="thin", color="D9D9D9"),
+        )
+        for c in range(1, 41):
+            col_letter = get_column_letter(c)
+            ws[f"{col_letter}{r}"].border = thin_data_border
 
     # Label column W header so it's human-readable in Excel
     ws["W5"] = "TMU Time (sec)"
