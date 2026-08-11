@@ -421,12 +421,40 @@ async def get_job_status(job_id: str):
     )
 
 
+def _get_job_or_404(job_id: str) -> dict:
+    """Retrieves a job from memory, or rehydrates it from disk if the server restarted."""
+    if job_id in JOBS:
+        return JOBS[job_id]
+
+    # Try rehydrating from upload directory cache
+    excel_file = UPLOAD_DIR / f"{job_id}.xlsx"
+    raw_video = UPLOAD_DIR / f"{job_id}.mp4"
+    insights_file = UPLOAD_DIR / f"{job_id}_insights.json"
+
+    if excel_file.exists() or raw_video.exists() or insights_file.exists():
+        JOBS[job_id] = {
+            "status": "COMPLETED",
+            "phase": "COMPLETED",
+            "progress": 1.0,
+            "created_at": time.monotonic(),
+            "completed_at": time.monotonic(),
+            "activity_description": "ASSY WITH PRESS OPERATION",
+            "station_no": "S1",
+            "activity_no": "A1",
+            "excel_path": excel_file if excel_file.exists() else None,
+            "rows": [],
+            "flags": [],
+            "events": [],
+        }
+        return JOBS[job_id]
+
+    raise HTTPException(status_code=404, detail="Job not found")
+
+
 @app.get("/api/v1/jobs/{job_id}/rows")
 async def get_job_rows(job_id: str):
     """Returns whatever MostRow data currently exists for this job, as JSON."""
-    job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+    job = _get_job_or_404(job_id)
     engine: HumanReviewEngine | None = job.get("review_engine")
     rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
     return [r.model_dump() for r in sorted(rows, key=lambda r: r.s_no)]
@@ -435,10 +463,7 @@ async def get_job_rows(job_id: str):
 @app.get("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)
 async def get_job_insights(job_id: str):
     """Returns cached Improvement Insights for a job, if previously generated."""
-    job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-
+    job = _get_job_or_404(job_id)
     cached = load_cached_insights(UPLOAD_DIR, job_id)
     if not cached:
         raise HTTPException(status_code=404, detail="Insights not generated yet for this job")
@@ -448,9 +473,7 @@ async def get_job_insights(job_id: str):
 @app.post("/api/v1/jobs/{job_id}/insights", response_model=ImprovementInsights)
 async def create_or_refresh_job_insights(job_id: str, refresh: bool = False):
     """On-demand trigger: Generates or refreshes AI Cycle-Improvement Insights for a study."""
-    job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
+    job = _get_job_or_404(job_id)
 
     engine: HumanReviewEngine | None = job.get("review_engine")
     rows: list[MostRow] = engine.get_finalized_rows() if engine else job.get("rows", [])
