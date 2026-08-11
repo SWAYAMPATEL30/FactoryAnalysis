@@ -124,8 +124,6 @@ export function PricingPage() {
             </div>
           ))}
         </div>
-
-
       </section>
     </div>
   );

@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 import type { Company, Role, User } from "../types/models";
 import { supabase } from "../lib/supabase";
 
+const DEMO_COMPANIES: Company[] = [
+  { id: "abc-corp", name: "ABC Corp", plan: "growth" },
+  { id: "xyz-ind", name: "XYZ Industries", plan: "starter" },
+];
+
 interface AuthState {
   company: Company | null;
   user: User | null;

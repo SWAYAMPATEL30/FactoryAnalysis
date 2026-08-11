@@ -6,7 +6,6 @@ import { HomePage } from "./pages/marketing/HomePage";
 import { HowItWorksPage } from "./pages/marketing/HowItWorksPage";
 import { MostMethodologyPage } from "./pages/marketing/MostMethodologyPage";
 import { IndustriesPage } from "./pages/marketing/IndustriesPage";
-import { PricingPage } from "./pages/marketing/PricingPage";
 import { AboutPage } from "./pages/marketing/AboutPage";
 
 // Auth
@@ -33,7 +32,6 @@ function App() {
       <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="/most-methodology" element={<MostMethodologyPage />} />
       <Route path="/industries" element={<IndustriesPage />} />
-      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/login" element={<LoginPage />} />
 

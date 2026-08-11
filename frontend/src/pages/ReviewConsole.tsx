@@ -12,6 +12,7 @@ import { EfficiencyGauge } from "../components/EfficiencyGauge";
 import { VaNvaDonut } from "../components/VaNvaDonut";
 import { MostTable } from "../components/MostTable";
 import { ParetoChart } from "../components/charts/ParetoChart";
+import { ImprovementInsightsPanel } from "../components/ImprovementInsightsPanel";
 import { useJobStream } from "../hooks/useJobStream";
 import { useToast } from "../components/ToastProvider";
 import type { TaxonomyBucket } from "../api/types";
@@ -180,6 +181,12 @@ export function ReviewConsole() {
                   Sorted by time consumed (descending). 1 TMU = 0.036 sec.
                 </p>
                 <ParetoChart rows={rows} height={280} />
+              </div>
+            )}
+
+            {rows.length > 0 && (
+              <div className="mb-6">
+                <ImprovementInsightsPanel jobId={jobId} />
               </div>
             )}
 

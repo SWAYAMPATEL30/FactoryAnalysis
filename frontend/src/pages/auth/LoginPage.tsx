@@ -11,6 +11,11 @@ const VIDEOS = [
   "/marketing/factory4.mp4",
 ];
 
+const DEMO_COMPANIES = [
+  { name: "ABC Corp", description: "3 workstations · Growth plan" },
+  { name: "XYZ Industries", description: "2 workstations · Starter plan" },
+];
+
 function LoginVideoBackground() {
   const [currentIndex, setCurrentIndex] = useState(() => {
     const saved = sessionStorage.getItem("login_video_index");
