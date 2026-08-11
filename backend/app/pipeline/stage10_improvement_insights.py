@@ -166,7 +166,20 @@ def load_cached_insights(upload_dir: Path, job_id: str) -> ImprovementInsights |
     if cache_path.exists():
         try:
             raw = json.loads(cache_path.read_text())
-            return ImprovementInsights.model_validate(raw)
+            insights = ImprovementInsights.model_validate(raw)
+            # Auto-backfill new fields if loading an older cached insights file
+            for eq in insights.equipment_upgrades:
+                if not eq.image_url or not eq.key_specs or not eq.shopping_url:
+                    _, _, surl, shurl, murl, imgurl, kspecs, tvendors = _web_search_equipment_upgrade(
+                        eq.suggested_upgrade, eq.activity_name, "T" if "TORQUE" in eq.suggested_upgrade.upper() or "SCREW" in eq.suggested_upgrade.upper() else "G"
+                    )
+                    eq.image_url = eq.image_url or imgurl
+                    eq.key_specs = eq.key_specs or kspecs
+                    eq.top_vendors = eq.top_vendors or tvendors
+                    eq.shopping_url = eq.shopping_url or shurl
+                    eq.mcmaster_url = eq.mcmaster_url or murl
+                    eq.search_url = eq.search_url or surl
+            return insights
         except Exception as e:
             logger.warning("Failed to parse cached insights for job %s: %s", job_id, e)
     return None
