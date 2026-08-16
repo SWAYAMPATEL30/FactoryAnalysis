@@ -44,17 +44,18 @@ export function ReviewConsole() {
   const isFailed = statusQuery.data?.status === "FAILED";
   const { events } = useJobStream(jobId, isDone || isFailed);
 
-  // Trigger toasts on completion (only fire once)
-  useEffect(() => {
-    if (isDone) toast("Analysis complete", "Your MOST report is ready.", "success");
-    if (isFailed) toast("Analysis failed", "There was an error processing the video.", "error");
-  }, [isDone, isFailed, toast]);
-
   const rowsQuery = useQuery({
     queryKey: ["rows", jobId],
     queryFn: () => getJobRows(jobId!),
     enabled: !!jobId,
-    refetchInterval: isDone ? false : 2000,
+    refetchInterval: (query) => {
+      // If completed, check if we got rows. If rows array is empty, keep polling every 1 sec until rows arrive!
+      if (isDone) {
+        const currentRows = query.state.data ?? [];
+        return currentRows.length > 0 ? false : 1000;
+      }
+      return 2000;
+    },
     refetchIntervalInBackground: true,
   });
 
@@ -63,6 +64,16 @@ export function ReviewConsole() {
     queryFn: () => getJobFlags(jobId!),
     enabled: !!jobId && isDone,
   });
+
+  // Trigger toasts & refetch rows on completion
+  useEffect(() => {
+    if (isDone) {
+      rowsQuery.refetch();
+      flagsQuery.refetch();
+      toast("Analysis complete", "Your PMTS report is ready.", "success");
+    }
+    if (isFailed) toast("Analysis failed", "There was an error processing the video.", "error");
+  }, [isDone, isFailed]);
 
   const rows = useMemo(() => rowsQuery.data ?? [], [rowsQuery.data]);
 

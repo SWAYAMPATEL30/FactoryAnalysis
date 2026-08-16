@@ -59,6 +59,12 @@ export function useJobStream(jobId: string | undefined, isTerminal: boolean) {
           };
         });
 
+        if (data.stage === "COMPLETED") {
+          queryClient.invalidateQueries({ queryKey: ["rows", jobId] });
+          queryClient.invalidateQueries({ queryKey: ["flags", jobId] });
+          queryClient.invalidateQueries({ queryKey: ["insights", jobId] });
+        }
+
       } catch (err) {
         console.error("Failed to parse SSE event", err);
       }
