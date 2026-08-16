@@ -38,7 +38,7 @@ function LogoMark() {
         </svg>
       </div>
       <span className="font-display font-bold text-base tracking-wide text-white leading-none">
-        IE<em className="not-italic font-extrabold italic tracking-widest text-accent">NEXT</em>
+        IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
       </span>
     </div>
   );

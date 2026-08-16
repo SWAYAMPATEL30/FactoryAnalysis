@@ -11,7 +11,7 @@ const LINKS = [
 function IENextLogo() {
   return (
     <span className="font-display font-bold text-lg tracking-wide text-white">
-      IE<em className="not-italic font-extrabold italic tracking-widest uppercase text-accent">NEXT</em>
+      IE<em className="font-extrabold italic tracking-widest uppercase text-accent">NEXT</em>
     </span>
   );
 }

@@ -18,24 +18,6 @@ function fmtTime(s: number): string {
   return `${m < 10 ? "0" : ""}${m}:${padSec}`;
 }
 
-function confidenceColor(confidence: number): string {
-  if (confidence >= 0.9) return "var(--color-va)";
-  if (confidence >= 0.75) return "var(--color-sva)";
-  return "var(--color-nva)";
-}
-
-function ConfidenceDot({ confidence }: { confidence: number }) {
-  const color = confidenceColor(confidence);
-  const low = confidence < 0.75;
-  return (
-    <div className="flex items-center justify-end gap-1.5">
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: color }} />
-      <span className="font-mono text-[10.5px]" style={{ color: low ? color : "var(--color-ink-faint)" }}>
-        {Math.round(confidence * 100)}%{low ? " — review" : ""}
-      </span>
-    </div>
-  );
-}
 
 interface Props {
   rows: MostRow[];
@@ -104,7 +86,6 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
                   >
                     {bucket}
                   </div>
-                  <ConfidenceDot confidence={row.confidence} />
                 </div>
               </motion.div>
             );
