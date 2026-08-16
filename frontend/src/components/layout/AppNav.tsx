@@ -35,7 +35,7 @@ function LogoMark() {
       <img
         src="/images/logo.png"
         alt="IENEXT Logo"
-        className="w-8 h-8 rounded-lg object-contain shrink-0 shadow-sm border border-white/10 bg-navy-mid/60"
+        className="w-8 h-8 object-contain shrink-0 filter drop-shadow"
       />
       <span className="font-display font-bold text-base tracking-wide text-white leading-none">
         IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>

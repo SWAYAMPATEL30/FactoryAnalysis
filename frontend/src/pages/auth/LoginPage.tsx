@@ -67,7 +67,7 @@ export function LoginPage() {
             <img
               src="/images/logo.png"
               alt="IENEXT Logo"
-              className="w-10 h-10 rounded-xl object-contain shadow-lg shadow-accent/20 border border-white/10 bg-navy-mid/60"
+              className="w-10 h-10 object-contain shrink-0 filter drop-shadow-md"
             />
             <span className="font-display font-bold text-2xl tracking-wide text-white">
               IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
