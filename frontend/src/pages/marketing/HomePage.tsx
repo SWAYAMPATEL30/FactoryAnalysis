@@ -97,9 +97,9 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── 4-step workflow ─────────────────────────────────────────── */}
+      {/* ── 7-step workflow ─────────────────────────────────────────── */}
       <section className="py-24 bg-raised">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-[1400px] px-6">
           <div className="mb-14">
             <div className="flex items-center gap-2 mb-3">
               <span className="inline-block h-px w-6 bg-accent" />
@@ -109,22 +109,33 @@ export function HomePage() {
               Video in. PMTS study out.
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3.5">
             {STEPS.map((step, i) => (
               <motion.div
                 key={step.num}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="relative p-6 rounded-xl border border-line bg-raised-2 hover:border-accent/40 hover:shadow-lg transition-all"
+                transition={{ delay: i * 0.07 }}
+                className="relative p-4 rounded-xl border border-line bg-raised-2 hover:border-accent/50 hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group"
               >
-                <div className="font-mono text-4xl font-bold text-accent/20 mb-4">{step.num}</div>
-                <h3 className="font-display font-bold text-xl uppercase text-ink mb-2">{step.label}</h3>
-                <p className="text-sm text-ink-dim leading-relaxed">{step.desc}</p>
-                {i < STEPS.length - 1 && (
-                  <div className="hidden lg:block absolute top-1/2 -right-4 text-line-strong text-xl">→</div>
-                )}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-mono text-2xl font-black text-accent/30 group-hover:text-accent/60 transition-colors">
+                      {step.num}
+                    </span>
+                    {i < STEPS.length - 1 && (
+                      <span className="hidden xl:inline-block text-ink-faint/30 font-mono text-xs font-bold">
+                        →
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-display font-bold text-xs uppercase tracking-wide text-ink mb-2 leading-snug break-words">
+                    {step.label}
+                  </h3>
+                  <p className="text-[11.5px] text-ink-dim leading-relaxed">{step.desc}</p>
+                </div>
               </motion.div>
             ))}
           </div>
