@@ -90,14 +90,16 @@ export function VaNvaDonut({ sums }: Props) {
         </div>
         
         <div className="flex-1 flex flex-col gap-2.5">
-          {segments.map(({ key, pct, val }) => {
-            if (val === 0 && hovered !== key) return null;
+          {/* Always show VA, SVA, NVA-N, NVA — even if zero */}
+          {(["VA", "SVA", "NVA-N", "NVA"] as TaxonomyBucket[]).map((key) => {
+            const seg = segments.find(s => s.key === key)!;
+            const { pct, val } = seg || { pct: 0, val: 0 };
             const isHovered = hovered === key;
             const isFaded = hovered !== null && !isHovered;
-            
+
             return (
-              <div 
-                key={key} 
+              <div
+                key={key}
                 className={`flex items-center justify-between text-sm transition-opacity duration-300 ${isFaded ? "opacity-30" : "opacity-100"}`}
                 onMouseEnter={() => setHovered(key)}
                 onMouseLeave={() => setHovered(null)}
@@ -106,7 +108,7 @@ export function VaNvaDonut({ sums }: Props) {
                   <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: COLOR[key] }} />
                   <span className={`truncate ${isHovered ? "text-ink" : "text-ink-dim"}`}>{LABEL[key]}</span>
                 </div>
-                <div className="font-mono text-ink text-xs">{Math.round(pct)}%</div>
+                <div className="font-mono text-ink text-xs">{val > 0 ? `${Math.round(pct)}%` : "—"}</div>
               </div>
             );
           })}

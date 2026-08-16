@@ -560,6 +560,19 @@ def write_most_analysis_workbook(
     # Label column W header so it's human-readable in Excel
     ws["W5"] = "TMU Time (sec)"
 
+    # Set generous column widths for trace columns AD through AN so text is never cut off
+    ws.column_dimensions["AD"].width = 30
+    ws.column_dimensions["AE"].width = 16
+    ws.column_dimensions["AF"].width = 16
+    ws.column_dimensions["AG"].width = 20
+    ws.column_dimensions["AH"].width = 20
+    ws.column_dimensions["AI"].width = 14
+    ws.column_dimensions["AJ"].width = 16
+    ws.column_dimensions["AK"].width = 45
+    ws.column_dimensions["AL"].width = 20
+    ws.column_dimensions["AM"].width = 20
+    ws.column_dimensions["AN"].width = 40
+
     last_row = FIRST_DATA_ROW + len(rows) - 1
     ws["D6"] = activity_description
     ws["W4"] = f"=SUM(W{FIRST_DATA_ROW}:W{last_row})"

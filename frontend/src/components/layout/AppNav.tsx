@@ -37,8 +37,8 @@ function LogoMark() {
           <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.9" />
         </svg>
       </div>
-      <span className="font-display font-bold text-base uppercase tracking-wide text-white leading-none">
-        Factory<br />Analysis
+      <span className="font-display font-bold text-base tracking-wide text-white leading-none">
+        IE<em className="not-italic font-extrabold italic tracking-widest text-accent">NEXT</em>
       </span>
     </div>
   );

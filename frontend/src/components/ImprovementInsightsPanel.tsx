@@ -118,12 +118,12 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
         </button>
       </div>
 
-      {/* SECTION A: Bottleneck Identification */}
+      {/* SECTION A: Activities with Highest Work Content */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <span className="flex h-5 w-5 items-center justify-center rounded bg-nva text-[10px] font-bold text-white">A</span>
           <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
-            Bottleneck Identification
+            Activities with Highest Work Content
           </h3>
         </div>
 
@@ -152,12 +152,12 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
         </div>
       </div>
 
-      {/* SECTION B: Non-Value-Add Elimination Candidates */}
+      {/* SECTION B: Maximum Work Content Potential Opportunity for Improvement */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <span className="flex h-5 w-5 items-center justify-center rounded bg-accent text-[10px] font-bold text-accent-ink">B</span>
           <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
-            Non-Value-Add Elimination Candidates
+            Maximum Work Content Potential Opportunity for Improvement
           </h3>
         </div>
 

@@ -39,7 +39,7 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span className="font-display text-sm font-semibold uppercase tracking-wide text-ink">
-            MOST Analysis Worksheet
+            PMTS Time Study Worksheet
           </span>
           <span className="rounded bg-line px-2 py-0.5 font-mono text-[11px] text-ink-dim">
             {rows.length} rows
@@ -59,7 +59,6 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
               <th className="px-3.5 py-3 text-right">MOST Sec</th>
               <th className="px-3.5 py-3 text-right">TMU</th>
               <th className="px-3.5 py-3 text-center">Category</th>
-              <th className="px-3.5 py-3 text-center">Confidence</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line/60">
@@ -113,19 +112,6 @@ export function MostTable({ rows, activeIndex, onSelect }: Props) {
                       }}
                     >
                       {bucket}
-                    </span>
-                  </td>
-                  <td className="px-3.5 py-3 text-center font-mono">
-                    <span
-                      className={`inline-block text-[11px] ${
-                        row.confidence >= 0.9
-                          ? "text-va font-semibold"
-                          : row.confidence >= 0.75
-                          ? "text-sva"
-                          : "text-nva font-bold animate-pulse"
-                      }`}
-                    >
-                      {Math.round(row.confidence * 100)}%
                     </span>
                   </td>
                 </tr>

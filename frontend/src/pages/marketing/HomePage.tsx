@@ -3,16 +3,19 @@ import { motion } from "framer-motion";
 import { MarketingNav } from "../../components/layout/MarketingNav";
 
 const STEPS = [
-  { num: "01", label: "Upload Video", desc: "Drop a short clip of any work cycle. Supports up to 512 MB." },
+  { num: "01", label: "Upload Video", desc: "Drop a short clip of any work cycle. Supports up to 512 MB. Secure and encrypted." },
   { num: "02", label: "Privacy Blur", desc: "Faces are automatically blurred before any AI processing — mandatory, not optional." },
-  { num: "03", label: "AI Motion Tracking", desc: "Hand position, held objects, and machine state are tracked frame-by-frame." },
-  { num: "04", label: "MOST Report", desc: "Segments are classified to MOST data cards and a TMU report is generated. A human engineer reviews before finalizing." },
+  { num: "03", label: "AI Time & Motion Analysis", desc: "AI Vision model analyses operator motions frame-by-frame, identifying each elemental activity automatically." },
+  { num: "04", label: "Elemental Wise Detailed Analysis", desc: "Every motion element is broken down with timing, PMTS classification, and structured work content." },
+  { num: "05", label: "MUDA Analysis", desc: "Non-value-add, semi-value-add, and waste activities are automatically identified and quantified." },
+  { num: "06", label: "AS IS Final Report", desc: "A complete PMTS time study report is generated — ready for engineering review and sign-off." },
+  { num: "07", label: "Potential Recommendations", desc: "AI recommends targeted improvements: bottleneck elimination, waste reduction, and equipment upgrades." },
 ];
 
 const STATS = [
   { value: "~5 min", label: "per 1-min video", sub: "vs. 30–60 min manual" },
   { value: "~$0.04", label: "per study", sub: "vs. $150–300 manual" },
-  { value: "BasicMOST", label: "methodology", sub: "G, C & T sequence models" },
+  { value: "PMTS", label: "methodology", sub: "Predetermined Motion Time System" },
   { value: "100%", label: "face privacy", sub: "blurred before any AI call" },
 ];
 
@@ -45,7 +48,7 @@ export function HomePage() {
             <motion.div variants={fade} className="flex items-center gap-2 mb-5">
               <span className="inline-block h-px w-8 bg-accent" />
               <span className="font-mono text-xs uppercase tracking-widest text-accent">
-                Automated MOST Studies · Video In, Report Out
+                Automated PMTS Studies · Video In, Report Out
               </span>
             </motion.div>
 
@@ -59,7 +62,7 @@ export function HomePage() {
             </motion.h1>
 
             <motion.p variants={fade} className="text-white/60 text-lg max-w-xl mb-10 leading-relaxed">
-              Upload a factory video. Get a complete MOST time study in minutes —
+              Upload a factory video. Get a complete PMTS time study in minutes —
               not the hours it takes a trained industrial engineer with a stopwatch.
             </motion.p>
 
@@ -103,10 +106,10 @@ export function HomePage() {
               <span className="font-mono text-xs uppercase tracking-widest text-accent">The pipeline</span>
             </div>
             <h2 className="font-display font-extrabold text-[42px] uppercase text-ink leading-tight">
-              Video in. MOST study out.
+              Video in. PMTS study out.
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
             {STEPS.map((step, i) => (
               <motion.div
                 key={step.num}
@@ -142,10 +145,10 @@ export function HomePage() {
         <div className="bg-navy flex flex-col justify-center px-12 py-16">
           <span className="font-mono text-xs uppercase tracking-widest text-accent mb-4">Why it matters</span>
           <h2 className="font-display font-extrabold text-4xl uppercase text-white leading-tight mb-6">
-            MOST studies shouldn't<br />require a stopwatch.
+            PMTS studies shouldn't<br />require a stopwatch.
           </h2>
           <p className="text-white/60 leading-relaxed mb-8">
-            Maynard Operation Sequence Technique has been the gold standard for labor time measurement
+            Predetermined Motion Time Systems (PMTS) have been the gold standard for labour time measurement
             since the 1970s. The methodology is proven. What's changed is that computer vision and
             AI can now perform the same classification a trained IE analyst does — in a fraction of
             the time, and with a mandatory human review step before anything is finalized.
@@ -154,7 +157,7 @@ export function HomePage() {
             onClick={() => navigate("/most-methodology")}
             className="self-start rounded-md border border-white/20 px-6 py-3 text-sm font-semibold text-white hover:border-accent hover:text-accent transition-colors"
           >
-            Learn about MOST →
+            Learn about PMTS →
           </button>
         </div>
       </section>
@@ -199,7 +202,7 @@ export function HomePage() {
             Ready to replace the stopwatch?
           </h2>
           <p className="text-white/50 text-lg mb-10">
-            Upload your first video and run a complete MOST study in under 10 minutes.
+            Upload your first video and run a complete PMTS study in under 10 minutes.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <button
@@ -215,13 +218,13 @@ export function HomePage() {
       {/* Footer */}
       <footer className="bg-navy border-t border-white/10 py-10 px-6">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="font-display font-bold text-white/60 uppercase text-sm">FactoryAnalysis</span>
+          <span className="font-display font-bold text-white/60 uppercase text-sm">IENEXT</span>
           <div className="flex gap-6 text-xs text-white/40">
             <button onClick={() => navigate("/how-it-works")} className="hover:text-white/70">How It Works</button>
             <button onClick={() => navigate("/most-methodology")} className="hover:text-white/70">MOST Methodology</button>
             <button onClick={() => navigate("/about")} className="hover:text-white/70">About</button>
           </div>
-          <span className="text-xs text-white/30">© 2026 FactoryAnalysis</span>
+          <span className="text-xs text-white/30">© 2026 IENEXT</span>
         </div>
       </footer>
     </div>

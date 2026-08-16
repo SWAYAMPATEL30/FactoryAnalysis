@@ -3,10 +3,18 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 
 const LINKS = [
   { to: "/how-it-works", label: "How It Works" },
-  { to: "/most-methodology", label: "MOST Methodology" },
+  { to: "/most-methodology", label: "PMTS Techniques" },
   { to: "/industries", label: "Industries" },
   { to: "/about", label: "About" },
 ];
+
+function IENextLogo() {
+  return (
+    <span className="font-display font-bold text-lg tracking-wide text-white">
+      IE<em className="not-italic font-extrabold italic tracking-widest uppercase text-accent">NEXT</em>
+    </span>
+  );
+}
 
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
@@ -22,9 +30,7 @@ export function MarketingNav() {
               <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.9" />
             </svg>
           </div>
-          <span className="font-display font-bold text-lg uppercase tracking-wide text-white">
-            FactoryAnalysis
-          </span>
+          <IENextLogo />
         </Link>
 
         {/* Desktop nav */}

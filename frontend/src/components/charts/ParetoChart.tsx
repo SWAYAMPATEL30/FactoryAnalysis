@@ -1,7 +1,9 @@
 import { useState } from "react";
 import type { MostRow } from "../../api/types";
+import { bucketFor } from "../../api/types";
 
 const TMU_TO_SEC = 0.036;
+const NVA_RED = "#c8452c";
 
 interface ParetoChartProps {
   rows: MostRow[];
@@ -51,17 +53,31 @@ export function ParetoChart({ rows, height = 300 }: ParetoChartProps) {
 
   if (!rows.length) return null;
 
-  // Build sorted pareto data
-  const totalSec = rows.reduce((acc, r) => acc + r.tmu * TMU_TO_SEC, 0);
+  // Filter to NVA activities only (NVA and NVA-N buckets)
+  const nvaRows = rows.filter(r => {
+    const bucket = bucketFor(r);
+    return bucket === "NVA" || bucket === "NVA-N";
+  });
 
-  const sorted = [...rows]
+  if (nvaRows.length === 0) {
+    return (
+      <div className="rounded-lg border border-line bg-raised-2/50 p-6 text-center text-sm text-ink-faint italic">
+        No non-value-add activities detected in this study.
+      </div>
+    );
+  }
+
+  // Build sorted NVA pareto data — all bars red
+  const totalNvaSec = nvaRows.reduce((acc, r) => acc + r.tmu * TMU_TO_SEC, 0);
+
+  const sorted = [...nvaRows]
     .sort((a, b) => b.tmu - a.tmu)
-    .slice(0, 12); // cap at 12 bars to avoid overcrowding
+    .slice(0, 12);
 
   let cumPct = 0;
   const bars: ParetoBar[] = sorted.map((r, i) => {
     const sec = r.tmu * TMU_TO_SEC;
-    const ownPct = totalSec > 0 ? (sec / totalSec) * 100 : 0;
+    const ownPct = totalNvaSec > 0 ? (sec / totalNvaSec) * 100 : 0;
     cumPct += ownPct;
     return {
       label: formatChartLabel(r.elemental_description || "", r.s_no),
@@ -130,12 +146,12 @@ export function ParetoChart({ rows, height = 300 }: ParetoChartProps) {
       )}
 
       {/* Callout banner */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm">
-        <span className="font-semibold text-amber-800">⚑ Longest activity: </span>
-        <span className="text-amber-700">
-          #{top.sNo} {top.fullDesc} — {top.sec.toFixed(1)}s ({top.ownPct.toFixed(0)}% of cycle time)
+      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm">
+        <span className="font-semibold text-red-800">⚑ Highest NVA Activity: </span>
+        <span className="text-red-700">
+          #{top.sNo} {top.fullDesc} — {top.sec.toFixed(1)}s ({top.ownPct.toFixed(0)}% of total NVA time)
         </span>
-        <span className="ml-2 text-xs text-amber-600 font-mono">
+        <span className="ml-2 text-xs text-red-600 font-mono">
           · {top.tmu.toFixed(0)} TMU
         </span>
       </div>
@@ -144,7 +160,7 @@ export function ParetoChart({ rows, height = 300 }: ParetoChartProps) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full overflow-visible"
-        aria-label="Pareto chart — time by activity"
+        aria-label="Pareto chart — NVA activities by time"
       >
         {/* Left Y axis label (seconds) */}
         <text
@@ -224,8 +240,8 @@ export function ParetoChart({ rows, height = 300 }: ParetoChartProps) {
               y={yBar(b.sec)}
               width={barW}
               height={plotH - (yBar(b.sec) - PAD.top)}
-              fill={b.isTop ? "#c8452c" : "var(--color-accent)"}
-              opacity={hoveredBar?.sNo === b.sNo ? 1 : b.isTop ? 0.9 : 0.72}
+              fill={NVA_RED}
+              opacity={hoveredBar?.sNo === b.sNo ? 1 : b.isTop ? 0.9 : 0.65}
               rx="3"
               className="transition-all hover:opacity-100"
             />
@@ -303,13 +319,13 @@ export function ParetoChart({ rows, height = 300 }: ParetoChartProps) {
 
         {/* Legend */}
         <g transform={`translate(${PAD.left}, ${H - 10})`}>
-          <rect x="0" y="-8" width="12" height="8" fill="#c8452c" rx="1" />
+          <rect x="0" y="-8" width="12" height="8" fill={NVA_RED} opacity="0.9" rx="1" />
           <text x="16" y="-1" fontSize="8" className="fill-[var(--color-ink-dim)] font-medium">
-            Top activity
+            Highest NVA
           </text>
-          <rect x="90" y="-8" width="12" height="8" fill="var(--color-accent)" opacity="0.72" rx="1" />
+          <rect x="90" y="-8" width="12" height="8" fill={NVA_RED} opacity="0.65" rx="1" />
           <text x="106" y="-1" fontSize="8" className="fill-[var(--color-ink-dim)] font-medium">
-            Other activities (sec)
+            NVA activities (sec)
           </text>
           <line x1="240" y1="-4" x2="256" y2="-4" stroke="#6a4fc4" strokeWidth="2" strokeDasharray="4 2" />
           <circle cx="248" cy="-4" r="3" fill="#6a4fc4" />
