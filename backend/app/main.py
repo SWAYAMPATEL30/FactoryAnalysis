@@ -86,6 +86,75 @@ def _emit(job_id: str, stage: str, status: str, detail: str = "", progress: floa
     JOBS.setdefault(job_id, {})["last_event"] = event
 
 
+def _job_json_path(job_id: str) -> Path:
+    """Returns the path of the JSON persistence file for a given job."""
+    return UPLOAD_DIR / f"{job_id}_job.json"
+
+
+def _save_job_to_disk(job_id: str, job: dict) -> None:
+    """Persist job metadata and MostRow list to a JSON file so they survive server restarts."""
+    try:
+        rows: list[MostRow] = job.get("rows", [])
+        flags: list = job.get("flags", [])
+        start = job.get("started_at")
+        end = job.get("completed_at")
+        elapsed = round(end - start, 1) if (start and end) else 30.0
+        payload = {
+            "job_id": job_id,
+            "status": job.get("status", "COMPLETED"),
+            "phase": job.get("phase", "COMPLETED"),
+            "activity_description": job.get("activity_description", ""),
+            "station_no": job.get("station_no", ""),
+            "activity_no": job.get("activity_no", ""),
+            "elapsed_sec": elapsed,
+            "raw_video_path": str(job.get("raw_video_path", "")),
+            "output_excel_path": str(job.get("output_excel_path") or job.get("excel_path", "")),
+            "rows": [r.model_dump() for r in rows],
+            "flags": [f.model_dump() if hasattr(f, "model_dump") else f for f in flags],
+        }
+        json_path = _job_json_path(job_id)
+        with open(json_path, "w", encoding="utf-8") as fp:
+            json.dump(payload, fp, indent=2)
+        print(f"[INFO] Persisted job {job_id} ({len(rows)} rows) to disk: {json_path}")
+    except Exception as save_err:
+        print(f"[WARN] Failed to persist job {job_id} to disk: {save_err}")
+
+
+def _load_job_from_disk(job_id: str) -> dict | None:
+    """Rehydrate a completed job from its JSON persistence file."""
+    json_path = _job_json_path(job_id)
+    if not json_path.exists():
+        return None
+    try:
+        with open(json_path, "r", encoding="utf-8") as fp:
+            payload = json.load(fp)
+        rows = [MostRow(**r) for r in payload.get("rows", [])]
+        flags = [ReviewFlag(**f) for f in payload.get("flags", [])]
+        engine = HumanReviewEngine(rows, [], flags)
+        excel_path = Path(payload["output_excel_path"]) if payload.get("output_excel_path") else None
+        raw_video_path = Path(payload["raw_video_path"]) if payload.get("raw_video_path") else None
+        job = {
+            "status": payload.get("status", "COMPLETED"),
+            "phase": payload.get("phase", "COMPLETED"),
+            "activity_description": payload.get("activity_description", ""),
+            "station_no": payload.get("station_no", ""),
+            "activity_no": payload.get("activity_no", ""),
+            "started_at": time.monotonic() - payload.get("elapsed_sec", 0),
+            "completed_at": time.monotonic(),
+            "raw_video_path": raw_video_path,
+            "output_excel_path": excel_path,
+            "excel_path": excel_path,
+            "rows": rows,
+            "flags": flags,
+            "review_engine": engine,
+        }
+        JOBS[job_id] = job
+        return job
+    except Exception as load_err:
+        print(f"[WARN] Failed to rehydrate job {job_id} from disk: {load_err}")
+        return None
+
+
 class JobStatusResponse(BaseModel):
     job_id: str
     status: str  # "QUEUED", "PROCESSING", "COMPLETED", "FAILED"
@@ -222,6 +291,8 @@ def _process_video_job(
         JOBS[job_id]["review_engine"] = engine
         JOBS[job_id]["excel_path"] = output_excel_path
         _emit(job_id, "COMPLETED", "done", f"Analysis complete — {len(rows)} motions classified", 1.0)
+        # Persist to disk so rows survive server restart
+        _save_job_to_disk(job_id, JOBS[job_id])
     except Exception as e:
         JOBS[job_id]["status"] = "FAILED"
         JOBS[job_id]["phase"] = "FAILED"
@@ -380,6 +451,8 @@ async def analyze_demo_video(
         "review_engine": engine,
         "excel_path": output_excel_path,
     }
+    # Persist demo job to disk too
+    _save_job_to_disk(job_id, JOBS[job_id])
 
     return JobStatusResponse(
         job_id=job_id,
@@ -426,12 +499,17 @@ def _get_job_or_404(job_id: str) -> dict:
     if job_id in JOBS:
         return JOBS[job_id]
 
-    # Try rehydrating from upload directory cache
-    excel_file = UPLOAD_DIR / f"{job_id}.xlsx"
-    raw_video = UPLOAD_DIR / f"{job_id}.mp4"
-    insights_file = UPLOAD_DIR / f"{job_id}_insights.json"
+    # Try rehydrating from the JSON persistence file first (most reliable)
+    job = _load_job_from_disk(job_id)
+    if job:
+        return job
 
-    if excel_file.exists() or raw_video.exists() or insights_file.exists():
+    # Legacy fallback: check for excel/video files with old naming pattern
+    excel_file = UPLOAD_DIR / f"{job_id}_most_analysis.xlsx"
+    raw_video_candidates = list(UPLOAD_DIR.glob(f"{job_id}_*.mp4")) + list(UPLOAD_DIR.glob(f"{job_id}_*.avi"))
+
+    if excel_file.exists() or raw_video_candidates:
+        raw_video_path = raw_video_candidates[0] if raw_video_candidates else None
         JOBS[job_id] = {
             "status": "COMPLETED",
             "phase": "COMPLETED",
@@ -441,7 +519,9 @@ def _get_job_or_404(job_id: str) -> dict:
             "activity_description": "ASSY WITH PRESS OPERATION",
             "station_no": "S1",
             "activity_no": "A1",
+            "raw_video_path": raw_video_path,
             "excel_path": excel_file if excel_file.exists() else None,
+            "output_excel_path": excel_file if excel_file.exists() else None,
             "rows": [],
             "flags": [],
             "events": [],
