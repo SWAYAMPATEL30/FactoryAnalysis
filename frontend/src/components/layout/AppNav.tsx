@@ -32,11 +32,11 @@ const NAV_ITEMS = [
 function LogoMark() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="w-7 h-7 rounded bg-accent flex items-center justify-center shrink-0">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.9" />
-        </svg>
-      </div>
+      <img
+        src="/images/logo.png"
+        alt="IENEXT Logo"
+        className="w-8 h-8 rounded-lg object-contain shrink-0 shadow-sm border border-white/10 bg-navy-mid/60"
+      />
       <span className="font-display font-bold text-base tracking-wide text-white leading-none">
         IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
       </span>

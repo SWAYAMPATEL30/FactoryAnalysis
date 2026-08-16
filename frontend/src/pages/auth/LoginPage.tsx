@@ -64,11 +64,11 @@ export function LoginPage() {
 
           {/* ── Logo ── */}
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/30">
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <path d="M2 12L6 4L10 9L13 6L15 12H2Z" fill="white" fillOpacity="0.95" />
-              </svg>
-            </div>
+            <img
+              src="/images/logo.png"
+              alt="IENEXT Logo"
+              className="w-10 h-10 rounded-xl object-contain shadow-lg shadow-accent/20 border border-white/10 bg-navy-mid/60"
+            />
             <span className="font-display font-bold text-2xl tracking-wide text-white">
               IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
             </span>
