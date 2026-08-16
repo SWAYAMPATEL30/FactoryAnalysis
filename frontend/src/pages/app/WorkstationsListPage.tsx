@@ -14,7 +14,7 @@ const TREND_BADGE: Record<Trend, { label: string; classes: string }> = {
 
 export function WorkstationsListPage() {
   const { company, user } = useAuth();
-  const { getWorkstationsForCompany, getVideosForWorkstation, createWorkstation } = useWorkstations();
+  const { getWorkstationsForCompany, getVideosForWorkstation, createWorkstation, deleteWorkstation } = useWorkstations();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", line: "" });
   const [saving, setSaving] = useState(false);
@@ -113,12 +113,13 @@ export function WorkstationsListPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {/* Table header */}
-          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_120px] gap-4 px-5 text-xs font-medium uppercase tracking-wide text-ink-faint">
+          <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_120px_40px] gap-4 px-5 text-xs font-medium uppercase tracking-wide text-ink-faint">
             <span>Workstation</span>
             <span>Line</span>
             <span>Latest TMU</span>
             <span>Studies</span>
             <span>Trend</span>
+            <span></span>
           </div>
           {stations.map((ws) => {
             const vids = getVideosForWorkstation(ws.id);
@@ -126,35 +127,56 @@ export function WorkstationsListPage() {
             const cfg = TREND_BADGE[trend];
             const latest = vids.find((v) => v.status === "COMPLETED");
             return (
-              <Link
-                key={ws.id}
-                to={`/app/workstations/${ws.id}`}
-                className="rounded-xl border border-line bg-raised hover:border-accent/40 hover:shadow-sm transition-all"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_120px] gap-4 items-center p-5">
-                  <div>
-                    <div className="font-semibold text-ink">{ws.name}</div>
-                    <div className="text-xs text-ink-faint mt-0.5 line-clamp-1">{ws.description}</div>
+              <div key={ws.id} className="relative group">
+                <Link
+                  to={`/app/workstations/${ws.id}`}
+                  className="block rounded-xl border border-line bg-raised hover:border-accent/40 hover:shadow-sm transition-all"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_120px_40px] gap-4 items-center p-5">
+                    <div>
+                      <div className="font-semibold text-ink">{ws.name}</div>
+                      <div className="text-xs text-ink-faint mt-0.5 line-clamp-1">{ws.description}</div>
+                    </div>
+                    <div className="text-sm text-ink-dim">{ws.line || "—"}</div>
+                    <div>
+                      {latest ? (
+                        <>
+                          <div className="font-mono font-bold text-ink">{latest.cycletime_tmu?.toLocaleString()}</div>
+                          <div className="text-xs text-ink-faint">{tmuToCycleTime(latest.cycletime_tmu ?? 0)}</div>
+                        </>
+                      ) : (
+                        <span className="text-ink-faint text-sm">—</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-ink-dim">{vids.length} {vids.length === 1 ? "study" : "studies"}</div>
+                    <div>
+                      <span className={`inline-block rounded-full border px-2.5 py-1 text-xs font-medium ${cfg.classes}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <div className="flex justify-end">
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (window.confirm(`Are you sure you want to delete workstation "${ws.name}"?`)) {
+                              deleteWorkstation(ws.id);
+                            }
+                          }}
+                          className="p-2 text-ink-faint hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete workstation"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-sm text-ink-dim">{ws.line || "—"}</div>
-                  <div>
-                    {latest ? (
-                      <>
-                        <div className="font-mono font-bold text-ink">{latest.cycletime_tmu?.toLocaleString()}</div>
-                        <div className="text-xs text-ink-faint">{tmuToCycleTime(latest.cycletime_tmu ?? 0)}</div>
-                      </>
-                    ) : (
-                      <span className="text-ink-faint text-sm">—</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-ink-dim">{vids.length} {vids.length === 1 ? "study" : "studies"}</div>
-                  <div>
-                    <span className={`inline-block rounded-full border px-2.5 py-1 text-xs font-medium ${cfg.classes}`}>
-                      {cfg.label}
-                    </span>
-                  </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             );
           })}
         </div>

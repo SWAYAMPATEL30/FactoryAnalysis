@@ -35,6 +35,7 @@ interface WorkstationContextValue {
   getWorkstationsForCompany: (companyId: string) => Workstation[];
   getVideosForWorkstation: (workstationId: string) => VideoEntry[];
   createWorkstation: (data: Omit<Workstation, "id" | "createdAt">) => Workstation;
+  deleteWorkstation: (id: string) => void;
   addVideo: (entry: Omit<VideoEntry, "id">) => VideoEntry;
   updateVideo: (id: string, patch: Partial<VideoEntry>) => void;
 }
@@ -47,7 +48,20 @@ const VID_KEY = "fa_videos";
 function loadOrSeed<T>(key: string, seed: T[]): T[] {
   try {
     const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as T[];
+    if (raw) {
+      const parsed = JSON.parse(raw) as T[];
+      if (key === WS_KEY) {
+        // Filter out dummy/test workstations (Test-1, Test2, assy, Trial Run, Dumy Trial)
+        const clean = (parsed as unknown as Workstation[]).filter((w) => {
+          const n = w.name.toLowerCase().trim();
+          const d = (w.description || "").toLowerCase().trim();
+          return !["test-1", "test2", "assy", "trial run", "test 1", "test"].includes(n) &&
+                 !d.includes("dumy") && !d.includes("test trial") && !d.includes("trials");
+        });
+        return clean as unknown as T[];
+      }
+      return parsed;
+    }
   } catch { /* ignore */ }
   return seed;
 }
@@ -78,6 +92,11 @@ export function WorkstationProvider({ children }: { children: ReactNode }) {
     return ws;
   }
 
+  function deleteWorkstation(id: string) {
+    setWorkstations((prev) => prev.filter((w) => w.id !== id));
+    setVideos((prev) => prev.filter((v) => v.workstationId !== id));
+  }
+
   function addVideo(entry: Omit<VideoEntry, "id">): VideoEntry {
     const vid: VideoEntry = { ...entry, id: `v-${Date.now()}` };
     setVideos((prev) => [...prev, vid]);
@@ -89,7 +108,7 @@ export function WorkstationProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WorkstationContext.Provider value={{ workstations, videos, getWorkstationsForCompany, getVideosForWorkstation, createWorkstation, addVideo, updateVideo }}>
+    <WorkstationContext.Provider value={{ workstations, videos, getWorkstationsForCompany, getVideosForWorkstation, createWorkstation, deleteWorkstation, addVideo, updateVideo }}>
       {children}
     </WorkstationContext.Provider>
   );
