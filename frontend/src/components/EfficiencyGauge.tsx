@@ -37,9 +37,8 @@ export function EfficiencyGauge({ vaSec, totalSec }: Props) {
     requestAnimationFrame(animate);
   }, [pct, controls]);
 
-  let color = "var(--color-nva)";
-  if (pct >= 50) color = "var(--color-va)";
-  else if (pct >= 30) color = "var(--color-sva)";
+  // Value Add is always represented in green
+  const color = "var(--color-va)";
 
   return (
     <div className="flex flex-col items-center justify-center p-6 rounded-md border border-line bg-raised h-full relative overflow-hidden">
