@@ -383,77 +383,119 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
       {/* SECTION E: Highly Experts Manufacturing Industries Consultant’s Support */}
       <div className="pt-2 border-t border-line">
         <div className="flex items-center gap-2 mb-3">
-          <span className="flex h-5 w-5 items-center justify-center rounded bg-indigo-600 text-[10px] font-bold text-white">E</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-purple-600 text-[10px] font-bold text-white">E</span>
           <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
             Highly Experts Manufacturing Industries Consultant’s Support
           </h3>
         </div>
 
-        <div className="rounded-xl border border-indigo-500/30 bg-gradient-to-br from-indigo-50/70 via-purple-50/30 to-raised p-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-xl shrink-0 shadow-xs">
-                👔
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Card 1: Full Kaizen & Recommendations Advisory */}
+          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="font-semibold text-ink text-xs truncate max-w-[260px]">
+                  Expert Lean & WCM Operations Consulting
+                </span>
+                <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-800 shrink-0">
+                  Turnaround: 2–3 working days
+                </span>
               </div>
-              <div>
-                <h4 className="font-semibold text-ink text-sm">
-                  Specialized Industrial Engineering & Operations Kaizen Consulting
-                </h4>
-                <div className="flex items-center gap-2 flex-wrap text-[11px] text-indigo-700 font-medium">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    2–3 Working Days Turnaround
+              <div className="space-y-1.5 text-xs text-ink-dim">
+                <div>
+                  <span className="font-medium text-ink-faint">Advisory Method: </span>
+                  <span>Lean, World Class Manufacturing (WCM), Benchmarking Practices</span>
+                </div>
+                <div>
+                  <span className="font-medium text-purple-700">Detailed Scope: </span>
+                  <span className="font-semibold text-ink leading-relaxed">
+                    Manufacturing Industries Highly Experienced Experts Consulting providing detail Kaizens and Recommendations list based on Lean, World class Manufacturing, Benchmarking practices within 2-3 working days
                   </span>
-                  <span>•</span>
-                  <span>Direct IE & Lean Master Practitioner Advisory</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span className="text-[10px] text-ink-faint font-medium">Core Practices:</span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Lean Manufacturing
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    World Class Mfg (WCM)
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Benchmarking
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Detail Kaizens
+                  </span>
+                </div>
+                <div className="pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowConsultantModal(true)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-600 hover:bg-purple-700 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors shadow-xs cursor-pointer active:scale-98"
+                  >
+                    <span>👔 Connect with Industry Expert Consultant ↗</span>
+                  </button>
                 </div>
               </div>
             </div>
-            <span className="rounded-full bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white tracking-wide shrink-0 shadow-xs">
-              Expert Kaizen Advisory
-            </span>
-          </div>
-
-          {/* User requested narration */}
-          <div className="bg-white/80 rounded-xl p-4 border border-indigo-100/90 shadow-xs mb-4">
-            <div className="text-[10px] font-mono uppercase font-bold text-indigo-800 tracking-wider mb-1">
-              Consulting Scope & Deliverables
-            </div>
-            <p className="text-xs text-ink-dim leading-relaxed font-medium">
-              Manufacturing Industries Highly Experienced Experts Consulting providing detail Kaizens and Recommendations list based on Lean, World class Manufacturing, Benchmarking practices within 2-3 working days
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[11px] font-medium text-ink mb-4">
-            <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-white/70 px-3 py-2 shadow-2xs">
-              <span className="text-emerald-600 font-bold">✓</span>
-              <span>Lean Manufacturing</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-white/70 px-3 py-2 shadow-2xs">
-              <span className="text-emerald-600 font-bold">✓</span>
-              <span>World Class Mfg (WCM)</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-white/70 px-3 py-2 shadow-2xs">
-              <span className="text-emerald-600 font-bold">✓</span>
-              <span>Benchmarking Practices</span>
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-white/70 px-3 py-2 shadow-2xs">
-              <span className="text-emerald-600 font-bold">✓</span>
-              <span>Detailed Kaizen Roadmap</span>
+            <div className="mt-3 pt-2 border-t border-purple-500/10 flex items-center justify-between text-[11px] font-mono">
+              <span className="text-ink-faint">Delivery: 2–3 Working Days</span>
+              <span className="text-purple-600 font-bold">Actionable Kaizen Roadmap</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-indigo-100">
-            <span className="text-xs text-ink-faint">
-              Need tailored on-site line balancing, ergonomic audits, or fixture design blueprints?
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowConsultantModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-98 px-4 py-2 text-xs font-semibold text-white transition-all shadow-xs cursor-pointer"
-            >
-              <span>Connect with Industry Expert ↗</span>
-            </button>
+          {/* Card 2: Specialized Line Balancing & Ergonomics Kaizens */}
+          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="font-semibold text-ink text-xs truncate max-w-[260px]">
+                  Line Balancing & Workstation Ergonomics
+                </span>
+                <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[9px] font-bold text-amber-800 shrink-0">
+                  Turnaround: 2–3 working days
+                </span>
+              </div>
+              <div className="space-y-1.5 text-xs text-ink-dim">
+                <div>
+                  <span className="font-medium text-ink-faint">Specialist Focus: </span>
+                  <span>Operator Ergonomics, Motion Waste Reduction & Fixture Optimization</span>
+                </div>
+                <div>
+                  <span className="font-medium text-purple-700">Deliverables: </span>
+                  <span className="font-semibold text-ink leading-relaxed">
+                    Custom motion study audit, takt-time line balancing, fixture design recommendations, and ROI cost-benefit analysis by certified Master Black Belts & IEs.
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span className="text-[10px] text-ink-faint font-medium">Deliverables:</span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Ergonomics Audit
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Line Balancing
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    Fixture Kaizens
+                  </span>
+                  <span className="rounded bg-purple-500/10 px-1.5 py-0.5 text-[9.5px] font-semibold text-purple-800">
+                    ROI Matrix
+                  </span>
+                </div>
+                <div className="pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowConsultantModal(true)}
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-600 hover:bg-purple-700 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors shadow-xs cursor-pointer active:scale-98"
+                  >
+                    <span>📋 Request Custom Engineering Kaizen Audit ↗</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-purple-500/10 flex items-center justify-between text-[11px] font-mono">
+              <span className="text-ink-faint">Support: Senior IE Specialists</span>
+              <span className="text-purple-600 font-bold">2–3 Days Fast Delivery</span>
+            </div>
           </div>
         </div>
       </div>
@@ -584,10 +626,10 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
       {/* Consultant Support Request Modal */}
       {showConsultantModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-lg rounded-2xl border border-indigo-500/30 bg-raised p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="relative w-full max-w-lg rounded-2xl border border-purple-500/30 bg-raised p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-start justify-between border-b border-line pb-3">
               <div>
-                <span className="rounded bg-indigo-100 px-2 py-0.5 font-mono text-[10px] font-bold text-indigo-800 uppercase tracking-wider">
+                <span className="rounded bg-purple-100 px-2 py-0.5 font-mono text-[10px] font-bold text-purple-800 uppercase tracking-wider">
                   Expert Consultation Request
                 </span>
                 <h3 className="font-display text-lg font-bold text-ink mt-1">
@@ -607,8 +649,8 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
               Manufacturing Industries Highly Experienced Experts Consulting providing detail Kaizens and Recommendations list based on Lean, World class Manufacturing, Benchmarking practices within 2-3 working days.
             </p>
 
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-2 text-xs text-ink">
-              <div className="font-semibold text-indigo-950">Included in the Consultation Package:</div>
+            <div className="rounded-xl border border-purple-100 bg-purple-50/50 p-4 space-y-2 text-xs text-ink">
+              <div className="font-semibold text-purple-950">Included in the Consultation Package:</div>
               <ul className="space-y-1.5 text-[11.5px] text-ink-dim list-disc list-inside">
                 <li>Video frame-by-frame Kaizen identification and motion breakdown</li>
                 <li>Line balancing & workstation ergonomics audit reports</li>
@@ -632,7 +674,7 @@ export function ImprovementInsightsPanel({ jobId }: Props) {
                   alert("Consultation request received! Our senior manufacturing consultant will review your study and reach out within 24 hours.");
                   setShowConsultantModal(false);
                 }}
-                className="rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-98 px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer shadow-xs"
+                className="rounded-lg bg-purple-600 hover:bg-purple-700 active:scale-98 px-4 py-2 text-xs font-semibold text-white transition-colors cursor-pointer shadow-xs"
               >
                 Submit Request (2–3 Days Turnaround)
               </button>
