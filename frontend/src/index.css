@@ -24,11 +24,12 @@
   --font-body: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 
-  --color-ground: #eef1f0;
+  /* Aesthetic light purple highlight page background */
+  --color-ground: #f4f0fa;
   --color-raised: #ffffff;
-  --color-raised-2: #f5f7f6;
-  --color-line: #d7dcda;
-  --color-line-strong: #b9c1be;
+  --color-raised-2: #ece6f7;
+  --color-line: #ddd4ed;
+  --color-line-strong: #c2b5de;
   --color-ink: #141a1f;
   --color-ink-dim: #57636b;
   --color-ink-faint: #8a949b;
@@ -37,8 +38,8 @@
   --color-accent-soft: #dcf1ed;
 
   /* Industrial marketing palette */
-  --color-navy: #0a1628;
-  --color-navy-mid: #112244;
+  --color-navy: #090e1f;
+  --color-navy-mid: #121936;
   --color-amber: #d4820a;
   --color-amber-soft: #fef3cd;
 
