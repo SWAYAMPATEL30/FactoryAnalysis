@@ -120,8 +120,8 @@ export function PhaseProgress({ phase }: { phase: string }) {
                   done
                     ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
                     : active
-                    ? "bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-600 text-white ring-4 ring-indigo-500/25 shadow-md shadow-indigo-500/20"
-                    : "bg-white border-slate-200 text-slate-500 shadow-2xs hover:border-slate-300"
+                    ? "bg-gradient-to-br from-purple-600 to-indigo-600 border-purple-600 text-white ring-4 ring-purple-500/30 shadow-md shadow-purple-500/25"
+                    : "bg-white border-purple-200 text-purple-900/60 shadow-2xs hover:border-purple-300"
                 }`}
               >
                 {done && p.key !== "COMPLETED" ? (
@@ -142,7 +142,7 @@ export function PhaseProgress({ phase }: { phase: string }) {
                 {/* Active glow pulse */}
                 {active && (
                   <motion.div
-                    className="absolute inset-0 rounded-full bg-indigo-500 -z-10"
+                    className="absolute inset-0 rounded-full bg-purple-500 -z-10"
                     animate={{ scale: [1, 1.35, 1], opacity: [0.5, 0, 0.5] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   />
@@ -154,15 +154,15 @@ export function PhaseProgress({ phase }: { phase: string }) {
                 <div
                   className={`font-mono text-[11px] uppercase tracking-wide font-bold transition-colors ${
                     active
-                      ? "text-indigo-600"
+                      ? "text-purple-700"
                       : done
-                      ? "text-slate-800"
-                      : "text-slate-600"
+                      ? "text-slate-900"
+                      : "text-slate-700"
                   }`}
                 >
                   {p.label}
                 </div>
-                <div className={`text-[10px] font-semibold mt-0.5 ${active ? "text-indigo-600 animate-pulse" : "opacity-0"}`}>
+                <div className={`text-[10px] font-semibold mt-0.5 ${active ? "text-purple-700 animate-pulse" : "opacity-0"}`}>
                   Running…
                 </div>
               </div>

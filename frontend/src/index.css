@@ -24,22 +24,22 @@
   --font-body: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 
-  /* Premium refined light lavender highlight page background */
-  --color-ground: #f6f5fb;
+  /* Distinct aesthetic light purple page background */
+  --color-ground: #efe8fa;
   --color-raised: #ffffff;
-  --color-raised-2: #eeebf7;
-  --color-line: #e2dcf0;
-  --color-line-strong: #cac2e2;
-  --color-ink: #0f172a;
-  --color-ink-dim: #334155;
-  --color-ink-faint: #64748b;
-  --color-accent: #6366f1;
+  --color-raised-2: #e4d7f7;
+  --color-line: #d6c3f2;
+  --color-line-strong: #bc9eed;
+  --color-ink: #1e113a;
+  --color-ink-dim: #433364;
+  --color-ink-faint: #736098;
+  --color-accent: #7c3aed;
   --color-accent-ink: #ffffff;
-  --color-accent-soft: #ede9fe;
+  --color-accent-soft: #ede4fc;
 
-  /* Industrial dark navy sidebar palette */
-  --color-navy: #0b1120;
-  --color-navy-mid: #131c33;
+  /* Dark navy-purple sidebar palette */
+  --color-navy: #0e091e;
+  --color-navy-mid: #1b1236;
   --color-amber: #d97706;
   --color-amber-soft: #fef3c7;
 
