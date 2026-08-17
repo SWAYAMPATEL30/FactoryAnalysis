@@ -73,8 +73,9 @@ const PHASES: { key: JobPhase; label: string; icon: ReactNode }[] = [
 export function PhaseProgress({ phase }: { phase: string }) {
   if (phase === "FAILED") {
     return (
-      <div className="rounded-md border border-nva bg-nva-soft px-4 py-3 text-sm text-nva">
-        Analysis failed. Check the backend logs for details.
+      <div className="rounded-xl border border-nva bg-nva-soft/50 px-5 py-4 text-sm font-semibold text-nva flex items-center gap-3">
+        <span>⚠️</span>
+        <span>Analysis failed. Check the backend logs for details.</span>
       </div>
     );
   }
@@ -92,16 +93,16 @@ export function PhaseProgress({ phase }: { phase: string }) {
             <div key={p.key} className="flex flex-col items-center flex-1 relative group">
               {/* Connector line */}
               {i < PHASES.length - 1 && (
-                <div className="absolute top-6 left-[50%] w-full h-[2px] -z-10 bg-line-strong overflow-hidden">
+                <div className="absolute top-6 left-[50%] w-full h-[3px] -z-10 bg-slate-200 overflow-hidden">
                   <motion.div
-                    className="h-full bg-accent"
+                    className="h-full bg-emerald-500"
                     initial={{ width: "0%" }}
                     animate={{ width: done ? "100%" : "0%" }}
                     transition={{ duration: 0.5 }}
                   />
                   {active && (
                     <motion.div
-                      className="absolute top-0 bottom-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50"
+                      className="absolute top-0 bottom-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-80"
                       animate={{ x: ["-100%", "300%"] }}
                       transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
                     />
@@ -114,17 +115,20 @@ export function PhaseProgress({ phase }: { phase: string }) {
                 initial={false}
                 animate={{
                   scale: active ? 1.15 : 1,
-                  backgroundColor: done || active ? "var(--color-accent)" : "var(--color-raised-2)",
-                  borderColor: done || active ? "var(--color-accent)" : "var(--color-line-strong)",
-                  color: done || active ? "var(--color-accent-ink)" : "var(--color-ink-faint)"
                 }}
-                className="w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 bg-raised relative shadow-sm"
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center z-10 relative transition-all duration-300 ${
+                  done
+                    ? "bg-emerald-600 border-emerald-600 text-white shadow-sm"
+                    : active
+                    ? "bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-600 text-white ring-4 ring-indigo-500/25 shadow-md shadow-indigo-500/20"
+                    : "bg-white border-slate-200 text-slate-500 shadow-2xs hover:border-slate-300"
+                }`}
               >
                 {done && p.key !== "COMPLETED" ? (
                   <motion.svg
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="w-5 h-5 text-accent-ink"
+                    className="w-5 h-5 text-white"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -138,24 +142,28 @@ export function PhaseProgress({ phase }: { phase: string }) {
                 {/* Active glow pulse */}
                 {active && (
                   <motion.div
-                    className="absolute inset-0 rounded-full bg-accent -z-10"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
+                    className="absolute inset-0 rounded-full bg-indigo-500 -z-10"
+                    animate={{ scale: [1, 1.35, 1], opacity: [0.5, 0, 0.5] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   />
                 )}
               </motion.div>
               
               {/* Step Label */}
-              <div className="mt-3 text-center">
+              <div className="mt-3 text-center px-1">
                 <div
-                  className={`font-mono text-[11px] uppercase tracking-wide font-semibold ${
-                    done || active ? "text-ink" : "text-ink-faint"
+                  className={`font-mono text-[11px] uppercase tracking-wide font-bold transition-colors ${
+                    active
+                      ? "text-indigo-600"
+                      : done
+                      ? "text-slate-800"
+                      : "text-slate-600"
                   }`}
                 >
                   {p.label}
                 </div>
-                <div className={`text-[10px] mt-0.5 ${active ? "text-accent animate-pulse" : "opacity-0"}`}>
-                  Running...
+                <div className={`text-[10px] font-semibold mt-0.5 ${active ? "text-indigo-600 animate-pulse" : "opacity-0"}`}>
+                  Running…
                 </div>
               </div>
             </div>

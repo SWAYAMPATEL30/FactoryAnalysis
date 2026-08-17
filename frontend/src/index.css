@@ -24,35 +24,35 @@
   --font-body: "IBM Plex Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 
-  /* Aesthetic light purple highlight page background */
-  --color-ground: #f4f0fa;
+  /* Premium refined light lavender highlight page background */
+  --color-ground: #f6f5fb;
   --color-raised: #ffffff;
-  --color-raised-2: #ece6f7;
-  --color-line: #ddd4ed;
-  --color-line-strong: #c2b5de;
-  --color-ink: #141a1f;
-  --color-ink-dim: #57636b;
-  --color-ink-faint: #8a949b;
-  --color-accent: #0e8f80;
+  --color-raised-2: #eeebf7;
+  --color-line: #e2dcf0;
+  --color-line-strong: #cac2e2;
+  --color-ink: #0f172a;
+  --color-ink-dim: #334155;
+  --color-ink-faint: #64748b;
+  --color-accent: #6366f1;
   --color-accent-ink: #ffffff;
-  --color-accent-soft: #dcf1ed;
+  --color-accent-soft: #ede9fe;
 
-  /* Industrial marketing palette */
-  --color-navy: #090e1f;
-  --color-navy-mid: #121936;
-  --color-amber: #d4820a;
-  --color-amber-soft: #fef3cd;
+  /* Industrial dark navy sidebar palette */
+  --color-navy: #0b1120;
+  --color-navy-mid: #131c33;
+  --color-amber: #d97706;
+  --color-amber-soft: #fef3c7;
 
-  --color-va: #1a9a52;
-  --color-va-soft: #dcf3e5;
-  --color-sva: #b4790a;
-  --color-sva-soft: #f8ecd6;
-  --color-nvan: #6a4fc4;
-  --color-nvan-soft: #ece7f9;
-  --color-nva: #c8452c;
-  --color-nva-soft: #f8e2dd;
-  --color-noise: #6b7684;
-  --color-noise-soft: #e6e9eb;
+  --color-va: #059669;
+  --color-va-soft: #d1fae5;
+  --color-sva: #d97706;
+  --color-sva-soft: #fef3c7;
+  --color-nvan: #7c3aed;
+  --color-nvan-soft: #ede9fe;
+  --color-nva: #e11d48;
+  --color-nva-soft: #ffe4e6;
+  --color-noise: #64748b;
+  --color-noise-soft: #f1f5f9;
 }
 
 :root[data-theme="dark"] {

@@ -133,35 +133,36 @@ export function ReviewConsole() {
   return (
     <div className="px-4 py-6 sm:px-6 sm:py-8 max-w-6xl mx-auto">
         {/* Breadcrumb */}
-        <div className="mb-4 flex items-center gap-2 text-xs text-ink-faint">
-          <button onClick={() => navigate(-1)} className="hover:text-accent transition-colors min-h-[44px] pr-2">← Back</button>
+        <div className="mb-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <button onClick={() => navigate(-1)} className="hover:text-indigo-600 transition-colors min-h-[44px] pr-1">← Back</button>
           <span>/</span>
           <span>Report</span>
-          {jobId && <span>· <span className="font-mono">{jobId.slice(0, 8)}…</span></span>}
+          {jobId && <span>· <span className="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{jobId.slice(0, 8)}…</span></span>}
         </div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="font-display text-2xl font-extrabold uppercase text-ink">Review</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-ink-faint">
-              <span>job {jobId}</span>
-              {stationNo && <span>· station {stationNo}</span>}
-              {activityNo && <span>· activity {activityNo}</span>}
+            <div className="font-display text-3xl font-extrabold uppercase text-slate-900 tracking-tight">Review Console</div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-slate-500 mt-1">
+              <span>Job: <strong className="text-slate-700 font-semibold">{jobId}</strong></span>
+              {stationNo && <span>· Station: <strong className="text-slate-700 font-semibold">{stationNo}</strong></span>}
+              {activityNo && <span>· Activity: <strong className="text-slate-700 font-semibold">{activityNo}</strong></span>}
             </div>
           </div>
           {isDone && (
             <a
               href={excelDownloadUrl(jobId)}
               download={`MOST_Analysis_${jobId.slice(0, 8)}.xlsx`}
-              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink no-underline min-h-[44px]"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-semibold text-white no-underline shadow-sm transition-all cursor-pointer min-h-[44px]"
             >
-              Download workbook (.xlsx)
+              <span>📥</span>
+              <span>Download workbook (.xlsx)</span>
             </a>
           )}
         </div>
 
         {!isDone && (
           <div className="mb-8">
-            <div className="rounded-md border border-line bg-raised p-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
               <PhaseProgress phase={phase} />
             </div>
             <LiveLogPanel events={events} />
