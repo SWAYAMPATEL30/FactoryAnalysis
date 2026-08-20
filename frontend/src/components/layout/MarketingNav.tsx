@@ -16,13 +16,13 @@ export function MarketingNav() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
-      <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
+      <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-20">
         {/* Logo */}
         <Link to="/" className="flex items-center group select-none py-1" aria-label="ambade IENEXT home">
           <img
             src="/images/combined_brand.png"
             alt="ambade IENEXT"
-            className="h-[44px] w-auto object-contain shrink-0 transition-transform group-hover:scale-102 filter drop-shadow"
+            className="h-[58px] w-auto object-contain shrink-0 transition-transform group-hover:scale-102 filter drop-shadow-md"
           />
         </Link>
 

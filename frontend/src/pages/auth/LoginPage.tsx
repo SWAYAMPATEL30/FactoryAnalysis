@@ -67,7 +67,7 @@ export function LoginPage() {
             <img
               src="/images/combined_brand.png"
               alt="ambade IENEXT"
-              className="h-[64px] w-auto object-contain self-start shrink-0 filter drop-shadow-md"
+              className="h-[84px] w-auto object-contain self-start shrink-0 filter drop-shadow-md"
             />
           </div>
 

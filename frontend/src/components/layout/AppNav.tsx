@@ -34,7 +34,7 @@ function LogoMark() {
     <img
       src="/images/combined_brand.png"
       alt="ambade IENEXT"
-      className="h-[48px] w-auto object-contain self-start shrink-0 filter drop-shadow"
+      className="h-[68px] w-auto object-contain self-start shrink-0 filter drop-shadow-md"
     />
   );
 }

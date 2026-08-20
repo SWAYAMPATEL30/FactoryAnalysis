@@ -233,7 +233,7 @@ export function HomePage() {
             <img
               src="/images/combined_brand.png"
               alt="ambade IENEXT"
-              className="h-9 w-auto object-contain filter drop-shadow"
+              className="h-14 w-auto object-contain filter drop-shadow"
             />
           </div>
           <div className="flex gap-6 text-xs text-white/40">
