@@ -64,11 +64,13 @@ export function LoginPage() {
 
           {/* ── Logo ── */}
           <div className="mb-8">
-            <img
-              src="/images/combined_brand.png"
-              alt="ambade IENEXT"
-              className="h-[72px] w-auto object-contain self-start shrink-0"
-            />
+            <div className="bg-white rounded-xl px-4 py-2 shadow-md inline-block">
+              <img
+                src="/images/combined_brand.png"
+                alt="ambade IENEXT"
+                className="h-[60px] w-auto object-contain shrink-0"
+              />
+            </div>
           </div>
 
           {/* ── Heading ── */}
