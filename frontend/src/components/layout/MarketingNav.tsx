@@ -19,11 +19,11 @@ export function MarketingNav() {
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
         {/* Logo — white card so brand colors show on dark nav */}
         <Link to="/" className="flex items-center group select-none" aria-label="ambade IENEXT home">
-          <div className="bg-white rounded-lg px-3 py-1 shadow-sm transition-opacity group-hover:opacity-90">
+          <div className="bg-white rounded-lg px-4 py-1.5 shadow-sm transition-opacity group-hover:opacity-90">
             <img
               src="/images/combined_brand.png"
               alt="ambade IENEXT"
-              className="h-[36px] w-auto object-contain shrink-0"
+              className="h-[50px] w-auto object-contain shrink-0"
             />
           </div>
         </Link>
