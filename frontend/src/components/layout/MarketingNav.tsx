@@ -32,7 +32,7 @@ export function MarketingNav() {
     >
       <div
         className={`mx-auto max-w-7xl px-6 flex items-center justify-between transition-all duration-300 ${
-          scrolled ? "h-14" : "h-20"
+          scrolled ? "h-16" : "h-22"
         }`}
       >
         {/* Logo */}
@@ -41,7 +41,7 @@ export function MarketingNav() {
             src="/images/combined_brand.png"
             alt="ambade IENEXT"
             className={`w-auto object-contain shrink-0 transition-all duration-300 group-hover:scale-102 filter drop-shadow-md ${
-              scrolled ? "h-[40px]" : "h-[58px]"
+              scrolled ? "h-[46px]" : "h-[68px] sm:h-[72px]"
             }`}
           />
         </Link>
