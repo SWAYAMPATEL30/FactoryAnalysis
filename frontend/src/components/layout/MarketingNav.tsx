@@ -8,13 +8,7 @@ const LINKS = [
   { to: "/about", label: "About" },
 ];
 
-function IENextLogo() {
-  return (
-    <span className="font-display font-bold text-sm tracking-[0.08em] text-white/90">
-      IE<em className="font-extrabold not-italic tracking-[0.15em] text-accent">NEXT</em>
-    </span>
-  );
-}
+
 
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
