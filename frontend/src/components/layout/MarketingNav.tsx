@@ -24,17 +24,14 @@ export function MarketingNav() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group select-none">
-          {/* Ambade wordmark — rendered white on dark nav */}
+        <Link to="/" className="flex flex-col justify-center py-1 gap-1 group select-none">
+          {/* Ambade company logo — original blue, transparent bg */}
           <img
             src="/images/ambade_logo.png"
             alt="Ambade"
-            className="h-[20px] w-auto object-contain shrink-0 transition-opacity group-hover:opacity-90"
-            style={{ filter: 'brightness(10) saturate(0) opacity(0.8)' }}
+            className="h-[20px] w-auto object-contain self-start shrink-0 drop-shadow-sm transition-opacity group-hover:opacity-85"
           />
-          {/* Slim vertical divider */}
-          <span className="w-px h-5 bg-white/20 shrink-0" />
-          {/* Circuit logo + IENEXT */}
+          {/* IENEXT product brand */}
           <div className="flex items-center gap-1.5">
             <img
               src="/images/logo.png"

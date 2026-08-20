@@ -31,22 +31,21 @@ const NAV_ITEMS = [
 // ── Logo mark (shared) ────────────────────────────────────────────────────────
 function LogoMark() {
   return (
-    <div className="flex flex-col">
-      {/* Company name — Ambade */}
+    <div className="flex flex-col gap-1">
+      {/* Ambade company logo — original blue colors, transparent bg */}
       <img
         src="/images/ambade_logo.png"
         alt="Ambade"
-        className="h-[22px] w-auto object-contain self-start shrink-0 brightness-200 contrast-75 saturate-0 invert opacity-80"
-        style={{ filter: 'brightness(2) saturate(0) invert(1) opacity(0.75)' }}
+        className="h-[22px] w-auto object-contain self-start shrink-0 drop-shadow-sm"
       />
-      {/* Product brand — IENEXT */}
-      <div className="flex items-center gap-2 mt-1.5">
+      {/* IENEXT product brand */}
+      <div className="flex items-center gap-2 mt-0.5">
         <img
           src="/images/logo.png"
           alt="IENEXT Logo"
           className="w-[18px] h-[18px] object-contain shrink-0 filter drop-shadow"
         />
-        <span className="font-display font-bold text-[13px] tracking-[0.08em] text-white/90 leading-none">
+        <span className="font-display font-bold text-[13px] tracking-[0.08em] text-white leading-none">
           IE<em className="font-extrabold not-italic tracking-[0.15em] text-accent">NEXT</em>
         </span>
       </div>
