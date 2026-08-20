@@ -29,7 +29,7 @@ export function MarketingNav() {
           <img
             src="/images/ambade_logo.png"
             alt="Ambade"
-            className="h-[20px] w-auto object-contain self-start shrink-0 drop-shadow-sm transition-opacity group-hover:opacity-85"
+            className="h-[20px] w-auto object-contain self-start shrink-0 transition-opacity group-hover:opacity-85"
           />
           {/* IENEXT product brand */}
           <div className="flex items-center gap-1.5">

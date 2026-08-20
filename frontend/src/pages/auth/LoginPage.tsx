@@ -68,7 +68,7 @@ export function LoginPage() {
             <img
               src="/images/ambade_logo.png"
               alt="Ambade"
-              className="h-[26px] w-auto object-contain self-start shrink-0 drop-shadow-sm"
+              className="h-[26px] w-auto object-contain self-start shrink-0"
             />
             {/* IENEXT product brand */}
             <div className="flex items-center gap-2 mt-0.5">
