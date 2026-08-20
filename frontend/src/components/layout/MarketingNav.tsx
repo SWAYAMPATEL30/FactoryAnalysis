@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 const LINKS = [
@@ -8,21 +8,41 @@ const LINKS = [
   { to: "/about", label: "About" },
 ];
 
-
-
 export function MarketingNav() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
-      <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-20">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-navy/95 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/30"
+          : "bg-navy/85 backdrop-blur-sm border-b border-white/5"
+      }`}
+    >
+      <div
+        className={`mx-auto max-w-7xl px-6 flex items-center justify-between transition-all duration-300 ${
+          scrolled ? "h-14" : "h-20"
+        }`}
+      >
         {/* Logo */}
         <Link to="/" className="flex items-center group select-none py-1" aria-label="ambade IENEXT home">
           <img
             src="/images/combined_brand.png"
             alt="ambade IENEXT"
-            className="h-[58px] w-auto object-contain shrink-0 transition-transform group-hover:scale-102 filter drop-shadow-md"
+            className={`w-auto object-contain shrink-0 transition-all duration-300 group-hover:scale-102 filter drop-shadow-md ${
+              scrolled ? "h-[40px]" : "h-[58px]"
+            }`}
           />
         </Link>
 
