@@ -63,24 +63,12 @@ export function LoginPage() {
         <div className="relative w-full max-w-sm mx-auto lg:mx-0">
 
           {/* ── Logo ── */}
-          <div className="flex flex-col gap-1 mb-8">
-            {/* Ambade company logo — original blue colors, transparent bg */}
+          <div className="mb-8">
             <img
-              src="/images/ambade_logo.png"
-              alt="Ambade"
-              className="h-[26px] w-auto object-contain self-start shrink-0"
+              src="/images/combined_brand.png"
+              alt="ambade IENEXT"
+              className="h-[72px] w-auto object-contain self-start shrink-0"
             />
-            {/* IENEXT product brand */}
-            <div className="flex items-center gap-2 mt-0.5">
-              <img
-                src="/images/logo.png"
-                alt="IENEXT Logo"
-                className="w-6 h-6 object-contain shrink-0 filter drop-shadow-md"
-              />
-              <span className="font-display font-extrabold text-xl tracking-[0.08em] text-white">
-                IE<em className="not-italic tracking-[0.18em] text-accent">NEXT</em>
-              </span>
-            </div>
           </div>
 
           {/* ── Heading ── */}

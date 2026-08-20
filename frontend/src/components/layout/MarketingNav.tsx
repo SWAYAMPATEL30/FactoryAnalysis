@@ -24,22 +24,12 @@ export function MarketingNav() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link to="/" className="flex flex-col justify-center py-1 gap-1 group select-none">
-          {/* Ambade company logo — original blue, transparent bg */}
+        <Link to="/" className="flex items-center group select-none" aria-label="ambade IENEXT home">
           <img
-            src="/images/ambade_logo.png"
-            alt="Ambade"
-            className="h-[20px] w-auto object-contain self-start shrink-0 transition-opacity group-hover:opacity-85"
+            src="/images/combined_brand.png"
+            alt="ambade IENEXT"
+            className="h-[48px] w-auto object-contain shrink-0 transition-opacity group-hover:opacity-85"
           />
-          {/* IENEXT product brand */}
-          <div className="flex items-center gap-1.5">
-            <img
-              src="/images/logo.png"
-              alt="IENEXT Logo"
-              className="w-[16px] h-[16px] object-contain shrink-0 filter drop-shadow"
-            />
-            <IENextLogo />
-          </div>
         </Link>
 
         {/* Desktop nav */}
