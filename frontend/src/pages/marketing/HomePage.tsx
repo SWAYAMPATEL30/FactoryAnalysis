@@ -229,15 +229,12 @@ export function HomePage() {
       {/* Footer */}
       <footer className="bg-navy border-t border-white/10 py-10 px-6">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col items-center md:items-start gap-1">
+          <div className="flex flex-col items-center md:items-start">
             <img
-              src="/images/ambade_logo.png"
-              alt="Ambade Logo"
-              className="h-5 w-auto object-contain filter drop-shadow brightness-125"
+              src="/images/combined_brand.png"
+              alt="ambade IENEXT"
+              className="h-9 w-auto object-contain filter drop-shadow"
             />
-            <span className="font-display font-bold text-white/60 uppercase text-xs tracking-wider">
-              IE<em className="italic font-extrabold text-accent">NEXT</em>
-            </span>
           </div>
           <div className="flex gap-6 text-xs text-white/40">
             <button onClick={() => navigate("/how-it-works")} className="hover:text-white/70">How It Works</button>

@@ -17,15 +17,13 @@ export function MarketingNav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
-        {/* Logo — white card so brand colors show on dark nav */}
-        <Link to="/" className="flex items-center group select-none" aria-label="ambade IENEXT home">
-          <div className="bg-white rounded-lg px-2.5 py-1 shadow-sm transition-opacity group-hover:opacity-90 flex items-center justify-center">
-            <img
-              src="/images/combined_brand.png"
-              alt="ambade IENEXT"
-              className="h-[38px] w-auto object-contain shrink-0"
-            />
-          </div>
+        {/* Logo */}
+        <Link to="/" className="flex items-center group select-none py-1" aria-label="ambade IENEXT home">
+          <img
+            src="/images/combined_brand.png"
+            alt="ambade IENEXT"
+            className="h-[44px] w-auto object-contain shrink-0 transition-transform group-hover:scale-102 filter drop-shadow"
+          />
         </Link>
 
         {/* Desktop nav */}

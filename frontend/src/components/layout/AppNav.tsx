@@ -31,13 +31,11 @@ const NAV_ITEMS = [
 // ── Logo mark (shared) ────────────────────────────────────────────────────────
 function LogoMark() {
   return (
-    <div className="bg-white rounded-lg px-3 py-1.5 shadow-sm self-start">
-      <img
-        src="/images/combined_brand.png"
-        alt="ambade IENEXT"
-        className="h-[44px] w-auto object-contain shrink-0"
-      />
-    </div>
+    <img
+      src="/images/combined_brand.png"
+      alt="ambade IENEXT"
+      className="h-[48px] w-auto object-contain self-start shrink-0 filter drop-shadow"
+    />
   );
 }
 
