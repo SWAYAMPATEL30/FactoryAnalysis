@@ -49,7 +49,7 @@ export function LoginPage() {
     <div className="h-screen max-h-screen w-full flex flex-col lg:flex-row bg-navy overflow-hidden">
 
       {/* ── Left Panel: Form ─────────────────────────────────────── */}
-      <div className="flex flex-col justify-between w-full lg:w-[460px] xl:w-[490px] shrink-0 px-6 sm:px-8 py-5 lg:py-6 relative z-10 h-full overflow-y-auto lg:overflow-hidden">
+      <div className="flex flex-col justify-between w-full lg:w-[460px] xl:w-[490px] shrink-0 px-6 sm:px-8 pt-4 pb-4 lg:pt-6 lg:pb-5 relative z-10 h-full overflow-y-auto lg:overflow-hidden">
 
         {/* Background grid texture on mobile only */}
         <div
@@ -60,14 +60,14 @@ export function LoginPage() {
           }}
         />
 
-        <div className="relative w-full max-w-sm mx-auto lg:mx-0 my-auto">
+        <div className="relative w-full max-w-sm mx-auto lg:mx-0">
 
           {/* ── Logo ── */}
-          <div className="mb-3">
+          <div className="mb-3.5">
             <img
               src="/images/combined_brand.png"
               alt="ambade IENEXT"
-              className="h-[52px] w-auto object-contain self-start shrink-0 filter drop-shadow-md"
+              className="h-[56px] w-auto object-contain self-start shrink-0 filter drop-shadow-md"
             />
           </div>
 
