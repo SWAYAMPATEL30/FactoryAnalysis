@@ -229,13 +229,22 @@ export function HomePage() {
       {/* Footer */}
       <footer className="bg-navy border-t border-white/10 py-10 px-6">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row justify-between items-center gap-4">
-          <span className="font-display font-bold text-white/60 uppercase text-sm">IENEXT</span>
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <img
+              src="/images/ambade_logo.png"
+              alt="Ambade Logo"
+              className="h-5 w-auto object-contain filter drop-shadow brightness-125"
+            />
+            <span className="font-display font-bold text-white/60 uppercase text-xs tracking-wider">
+              IE<em className="italic font-extrabold text-accent">NEXT</em>
+            </span>
+          </div>
           <div className="flex gap-6 text-xs text-white/40">
             <button onClick={() => navigate("/how-it-works")} className="hover:text-white/70">How It Works</button>
-            <button onClick={() => navigate("/most-methodology")} className="hover:text-white/70">MOST Methodology</button>
+            <button onClick={() => navigate("/most-methodology")} className="hover:text-white/70">PMTS Techniques</button>
             <button onClick={() => navigate("/about")} className="hover:text-white/70">About</button>
           </div>
-          <span className="text-xs text-white/30">© 2026 IENEXT</span>
+          <span className="text-xs text-white/30">© 2026 Ambade · IENEXT</span>
         </div>
       </footer>
     </div>

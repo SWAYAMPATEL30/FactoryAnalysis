@@ -63,15 +63,22 @@ export function LoginPage() {
         <div className="relative w-full max-w-sm mx-auto lg:mx-0">
 
           {/* ── Logo ── */}
-          <div className="flex items-center gap-3 mb-10">
+          <div className="flex flex-col gap-2.5 mb-8">
             <img
-              src="/images/logo.png"
-              alt="IENEXT Logo"
-              className="w-10 h-10 object-contain shrink-0 filter drop-shadow-md"
+              src="/images/ambade_logo.png"
+              alt="Ambade Logo"
+              className="h-8.5 w-auto object-contain self-start filter drop-shadow-md brightness-125"
             />
-            <span className="font-display font-bold text-2xl tracking-wide text-white">
-              IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
-            </span>
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/images/logo.png"
+                alt="IENEXT Logo"
+                className="w-7 h-7 object-contain shrink-0 filter drop-shadow-md"
+              />
+              <span className="font-display font-bold text-2xl tracking-wide text-white">
+                IE<em className="font-extrabold italic tracking-widest text-accent">NEXT</em>
+              </span>
+            </div>
           </div>
 
           {/* ── Heading ── */}

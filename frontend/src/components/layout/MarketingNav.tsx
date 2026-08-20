@@ -24,13 +24,20 @@ export function MarketingNav() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-navy/95 backdrop-blur border-b border-white/10">
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between h-16">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5">
+        <Link to="/" className="flex flex-col justify-center py-1 group">
           <img
-            src="/images/logo.png"
-            alt="IENEXT Logo"
-            className="w-8 h-8 object-contain shrink-0 filter drop-shadow"
+            src="/images/ambade_logo.png"
+            alt="Ambade Logo"
+            className="h-5.5 w-auto object-contain self-start shrink-0 filter drop-shadow brightness-125 transition-transform group-hover:scale-102"
           />
-          <IENextLogo />
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <img
+              src="/images/logo.png"
+              alt="IENEXT Logo"
+              className="w-4.5 h-4.5 object-contain shrink-0 filter drop-shadow"
+            />
+            <IENextLogo />
+          </div>
         </Link>
 
         {/* Desktop nav */}
