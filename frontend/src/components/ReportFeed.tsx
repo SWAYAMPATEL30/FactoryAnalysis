@@ -42,10 +42,12 @@ interface Props {
   activeIndex: number;
   onSelect: (index: number) => void;
   generating: boolean;
+  isFailed?: boolean;
+  errorMessage?: string | null;
   autoFollow: boolean;
 }
 
-export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow }: Props) {
+export function ReportFeed({ rows, activeIndex, onSelect, generating, isFailed, errorMessage, autoFollow }: Props) {
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
@@ -58,9 +60,9 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
     <div className="flex h-full max-h-[500px] flex-col rounded-md border border-line bg-raised">
       <div className="flex items-center justify-between border-b border-line px-4.5 py-3.5">
         <div className="text-sm font-semibold text-ink">
-          Report {generating ? "— generating" : `— ${rows.length} motions`}
+          {isFailed ? "Report — failed" : generating ? "Report — generating" : `Report — ${rows.length} motions`}
         </div>
-        {generating && (
+        {generating && !isFailed && (
           <div className="flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-wide text-accent">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
             Live
@@ -112,7 +114,18 @@ export function ReportFeed({ rows, activeIndex, onSelect, generating, autoFollow
         </AnimatePresence>
         {rows.length === 0 && (
           <div className="px-4 py-10 text-center text-sm text-ink-faint">
-            {generating ? "Video analysis in progress. Please wait for the pipeline to finish processing to view motion segments." : "No rows yet."}
+            {isFailed ? (
+              <div className="flex flex-col items-center gap-2 text-red-400">
+                <span className="font-semibold text-base">Analysis Interrupted / Failed</span>
+                <span className="text-xs text-red-300 max-w-sm">
+                  {errorMessage || "The backend process was interrupted or encountered an error."}
+                </span>
+              </div>
+            ) : generating ? (
+              "Video analysis in progress. Please wait for the pipeline to finish processing to view motion segments."
+            ) : (
+              "No rows yet."
+            )}
           </div>
         )}
       </div>

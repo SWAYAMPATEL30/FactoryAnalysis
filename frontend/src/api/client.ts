@@ -25,32 +25,15 @@ export interface AnalyzeMeta {
 }
 
 export async function analyzeVideo(file: File, meta: AnalyzeMeta): Promise<JobStatusResponse> {
-  try {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("activity_description", meta.activityDescription);
-    if (meta.stationNo) form.append("station_no", meta.stationNo);
-    if (meta.activityNo) form.append("activity_no", meta.activityNo);
-    if (meta.fastMode !== undefined) form.append("fast_mode", meta.fastMode ? "true" : "false");
-    if (meta.workstationId) form.append("workstation_id", meta.workstationId);
-    const res = await fetch(`${BASE}/analyze`, { method: "POST", body: form });
-    return await handle<JobStatusResponse>(res);
-  } catch (err: any) {
-    if (err?.message?.includes("Failed to fetch") || err?.message?.includes("NetworkError") || err?.message?.includes("504")) {
-      return {
-        job_id: `job-${Date.now()}`,
-        status: "PROCESSING",
-        phase: "PREPROCESSING",
-        row_count: 0,
-        flag_count: 0,
-        error: null,
-        elapsed_sec: 1.5,
-        estimated_manual_sec: 180,
-        workstation_id: meta.workstationId || meta.stationNo || null,
-      };
-    }
-    throw err;
-  }
+  const form = new FormData();
+  form.append("file", file);
+  form.append("activity_description", meta.activityDescription);
+  if (meta.stationNo) form.append("station_no", meta.stationNo);
+  if (meta.activityNo) form.append("activity_no", meta.activityNo);
+  if (meta.fastMode !== undefined) form.append("fast_mode", meta.fastMode ? "true" : "false");
+  if (meta.workstationId) form.append("workstation_id", meta.workstationId);
+  const res = await fetch(`${BASE}/analyze`, { method: "POST", body: form });
+  return await handle<JobStatusResponse>(res);
 }
 
 export async function analyzeSampleVideo(meta: AnalyzeMeta): Promise<JobStatusResponse> {
@@ -99,11 +82,11 @@ export async function getJobStatus(jobId: string): Promise<JobStatusResponse> {
   } catch (err) {
     return {
       job_id: jobId,
-      status: "PROCESSING",
-      phase: "PREPROCESSING",
+      status: "FAILED",
+      phase: "FAILED",
       row_count: 0,
       flag_count: 0,
-      error: null,
+      error: "Job not found on backend server.",
       elapsed_sec: null,
       estimated_manual_sec: null,
     };

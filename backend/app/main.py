@@ -40,7 +40,7 @@ app = FastAPI(
 @app.on_event("startup")
 def startup_event():
     print("Application starting up, scanning /app/data/uploads...")
-    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=100)
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,6 +76,7 @@ def _save_jobs_to_disk() -> None:
             data[j_id] = {
                 "status": job.get("status"),
                 "phase": job.get("phase"),
+                "analysis_dir": str(job.get("analysis_dir")) if job.get("analysis_dir") else None,
                 "raw_video_path": str(job.get("raw_video_path")) if job.get("raw_video_path") else None,
                 "output_excel_path": str(job.get("output_excel_path")) if job.get("output_excel_path") else None,
                 "activity_description": job.get("activity_description", ""),
@@ -103,6 +104,7 @@ def _load_jobs_from_disk() -> None:
     try:
         data = json.loads(JOBS_DB_PATH.read_text(encoding="utf-8"))
         for j_id, item in data.items():
+            analysis_dir = Path(item["analysis_dir"]) if item.get("analysis_dir") else (UPLOAD_DIR / f"analysis_{j_id}")
             raw_video = Path(item["raw_video_path"]) if item.get("raw_video_path") else None
             excel_path = Path(item["output_excel_path"]) if item.get("output_excel_path") else None
 
@@ -115,6 +117,7 @@ def _load_jobs_from_disk() -> None:
             JOBS[j_id] = {
                 "status": item.get("status", "COMPLETED"),
                 "phase": item.get("phase", "COMPLETED"),
+                "analysis_dir": analysis_dir,
                 "raw_video_path": raw_video,
                 "output_excel_path": excel_path,
                 "activity_description": item.get("activity_description", ""),
@@ -305,7 +308,7 @@ def _process_video_job(
                             print(f"Warning: Failed to delete dir {file_path.name}: {e}")
                             
             print("Post-processing cleanup completed.")
-            enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+            enforce_storage_limits(UPLOAD_DIR, max_analyses=100)
         except Exception as e:
             print(f"Warning: Post-processing cleanup failed: {e}")
 
@@ -325,7 +328,7 @@ async def analyze_video(
     analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
 
     # CLEANUP BEFORE UPLOAD TO PREVENT Errno 28 No space left on device
-    enforce_storage_limits(UPLOAD_DIR, max_analyses=5)
+    enforce_storage_limits(UPLOAD_DIR, max_analyses=100)
     
     # VERIFY DISK SPACE
     required_bytes = int(request.headers.get("content-length", 0)) + 50_000_000  # 50MB buffer
@@ -613,27 +616,43 @@ def _ranged_file_response(file_path: Path, range_header: str | None, media_type:
 
 @app.get("/api/v1/jobs/{job_id}/video")
 async def get_job_video(job_id: str, request: Request):
-    """Streams the original uploaded video back with Range header support for seeking."""
+    """Streams the original/blurred video back with Range header support for seeking."""
     job = JOBS.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
     analysis_dir: Path = job.get("analysis_dir")
     if not analysis_dir or not analysis_dir.exists():
-        raise HTTPException(status_code=404, detail="Analysis directory missing")
+        if job.get("raw_video_path"):
+            analysis_dir = Path(job.get("raw_video_path")).parent
+        else:
+            analysis_dir = UPLOAD_DIR / f"analysis_{job_id}"
 
     is_completed = job.get("status") == "COMPLETED"
 
+    video_path = None
     if is_completed:
-        video_path = analysis_dir / "blurred.mp4"
-        if not video_path.exists():
-            video_path = analysis_dir / "original.mp4"
+        possible_paths = [
+            analysis_dir / "blurred.mp4",
+            analysis_dir / "original.mp4",
+        ]
+        if job.get("raw_video_path"):
+            possible_paths.append(Path(job.get("raw_video_path")))
     else:
-        video_path = analysis_dir / "original.mp4"
-        if not video_path.exists():
-            video_path = analysis_dir / "blurred.mp4"
-        if not video_path.exists():
-            raise HTTPException(status_code=404, detail="Video file missing")
+        possible_paths = [
+            analysis_dir / "original.mp4",
+            analysis_dir / "blurred.mp4",
+        ]
+        if job.get("raw_video_path"):
+            possible_paths.insert(0, Path(job.get("raw_video_path")))
+
+    for p in possible_paths:
+        if p and p.exists() and p.is_file() and p.stat().st_size > 0:
+            video_path = p
+            break
+
+    if not video_path:
+        raise HTTPException(status_code=404, detail="Video file missing")
 
     range_header = request.headers.get("range")
     return _ranged_file_response(video_path, range_header, "video/mp4")

@@ -89,5 +89,37 @@ def blur_faces(input_path: Path, output_path: Path, blur_ksize: int = 65) -> Pat
         cap.release()
         writer.release()
 
+    _attach_audio_track(input_path, output_path)
     return output_path
+
+
+def _attach_audio_track(input_path: Path, output_path: Path) -> None:
+    """Encodes output_path to H.264 (libx264/yuv420p) and copies/muxes the original audio stream
+    from input_path so HTML5 video players in Chrome/Edge/Firefox can decode and play the video natively."""
+    try:
+        import subprocess
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+        temp_mux_path = output_path.with_name("blurred_web_h264.mp4")
+
+        cmd = [
+            ffmpeg_exe, "-y",
+            "-i", str(output_path),
+            "-i", str(input_path),
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-preset", "ultrafast",
+            "-movflags", "+faststart",
+            "-c:a", "aac",
+            "-map", "0:v:0",
+            "-map", "1:a:0?",
+            "-shortest",
+            str(temp_mux_path)
+        ]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if res.returncode == 0 and temp_mux_path.exists() and temp_mux_path.stat().st_size > 0:
+            temp_mux_path.replace(output_path)
+            print("Successfully attached audio stream to blurred video")
+    except Exception as e:
+        print(f"Warning: Could not attach audio stream: {e}")
 

@@ -217,6 +217,8 @@ export function ReviewConsole() {
             activeIndex={activeIndex}
             onSelect={(i) => seek(rows[i].t_start_sec)}
             generating={generating}
+            isFailed={isFailed}
+            errorMessage={statusQuery.data?.error}
             autoFollow={isPlaying}
           />
         </div>

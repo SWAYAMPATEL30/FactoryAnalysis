@@ -5,10 +5,10 @@ from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
-def enforce_storage_limits(upload_dir: Path, max_analyses: int = 5) -> None:
+def enforce_storage_limits(upload_dir: Path, max_analyses: int = 100) -> None:
     """
-    Enforce a strict limit of max_analyses by scanning the filesystem for analysis_* folders,
-    sorting them, keeping the newest max_analyses, and completely removing the oldest using shutil.rmtree().
+    Enforce a storage limit of max_analyses by scanning the filesystem for analysis_* folders,
+    sorting them, keeping the newest max_analyses (default 100), and removing oldest if limit exceeded.
     """
     logger.info("Starting storage cleanup...")
     print("Starting storage cleanup...")
